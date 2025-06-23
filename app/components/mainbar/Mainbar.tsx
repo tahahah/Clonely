@@ -1,4 +1,4 @@
-import { Mic, MenuIcon, SettingsIcon, Command, CornerDownLeft } from "lucide-react"
+import { Mic, MenuIcon, SettingsIcon, Command, CornerDownLeft, Space } from "lucide-react"
 import { Button } from "../ui/button"
 
 export const Mainbar = () => {
@@ -18,7 +18,8 @@ export const Mainbar = () => {
                     <div className="flex items-center gap-2">       
                         <Button variant="ghost" size="sm">
                             <span>Hide</span>
-                            <MenuIcon />
+                            <Command />
+                            <Space />
                         </Button>
                     </div>
 

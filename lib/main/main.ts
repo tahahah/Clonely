@@ -1,7 +1,9 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, protocol, net } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAppWindow } from './app'
 import { ShortcutsHelper } from './shortcuts'
+import { join } from 'path'
+import { pathToFileURL } from 'url'
 
 // Optional: Enables GPU acceleration for transparent windows on Windows
 // app.commandLine.appendSwitch('enable-transparent-visuals')
@@ -13,12 +15,30 @@ if (process.platform === 'win32' && !app.isPackaged) {
 
 app.disableHardwareAcceleration();
 
+// Register custom protocol for assets
+function registerResourcesProtocol() {
+  protocol.handle('res', async (request) => {
+    try {
+      const url = new URL(request.url)
+      // Combine hostname and pathname to get the full path
+      const fullPath = join(url.hostname, url.pathname.slice(1))
+      const filePath = join(__dirname, '../../resources', fullPath)
+      return net.fetch(pathToFileURL(filePath).toString())
+    } catch (error) {
+      console.error('Protocol error:', error)
+      return new Response('Resource not found', { status: 404 })
+    }
+  })
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
+  // Register custom protocol for assets
+  registerResourcesProtocol()
   // Create app window
   const mainWindow = createAppWindow()
   const shortcutsHelper = new ShortcutsHelper(mainWindow);
