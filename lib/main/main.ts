@@ -3,6 +3,16 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAppWindow } from './app'
 import { ShortcutsHelper } from './shortcuts'
 
+// Optional: Enables GPU acceleration for transparent windows on Windows
+// app.commandLine.appendSwitch('enable-transparent-visuals')
+
+// Disable GPU Acceleration for Windows 7
+if (process.platform === 'win32' && !app.isPackaged) {
+  app.disableHardwareAcceleration()
+}
+
+app.disableHardwareAcceleration();
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
