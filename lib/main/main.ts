@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAppWindow } from './app'
+import { ShortcutsHelper } from './shortcuts'
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -9,7 +10,10 @@ app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
   // Create app window
-  createAppWindow()
+  const mainWindow = createAppWindow()
+  const shortcutsHelper = new ShortcutsHelper(mainWindow);
+  shortcutsHelper.registerGlobalShortcuts();
+
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

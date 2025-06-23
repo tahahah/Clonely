@@ -1,29 +1,39 @@
-import { BrowserWindow, shell, app, protocol, net } from 'electron'
+import { BrowserWindow, shell, app, protocol, net, screen } from 'electron'
 import { join } from 'path'
 import { registerWindowIPC } from '@/lib/window/ipcEvents'
 import appIcon from '@/resources/build/icon.png?asset'
 import { pathToFileURL } from 'url'
 
-export function createAppWindow(): void {
+export function createAppWindow(): BrowserWindow {
   // Register custom protocol for resources
   registerResourcesProtocol()
+  const workArea = screen.getPrimaryDisplay().workAreaSize
+  const screenWidth = workArea.width
+  const screenHeight = workArea.height
 
   // Create the main window.
   const mainWindow = new BrowserWindow({
     width: 900,
-    height: 670,
-    show: false,
-    backgroundColor: '#1c1c1c',
-    icon: appIcon,
-    frame: false,
-    titleBarStyle: 'hiddenInset',
-    title: 'Electron React App',
-    maximizable: false,
-    resizable: false,
+    height: 100,
+    x: Math.floor(screenWidth / 2) - 450,
+    y: 10,
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       sandbox: false,
     },
+    show: false,
+    alwaysOnTop: true,
+    frame: false,
+    transparent: true,
+    fullscreenable: false,
+    hasShadow: false,
+    focusable: true,
+    icon: appIcon,
+    titleBarStyle: 'hiddenInset',
+    title: 'CluelyHireMe',
+    maximizable: false,
+    backgroundColor: '#1c1c1c',
+    resizable: false,
   })
 
   // Register IPC events for the main window.
@@ -45,6 +55,7 @@ export function createAppWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+  return mainWindow;
 }
 
 // Register custom protocol for assets
