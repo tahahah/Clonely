@@ -13,9 +13,9 @@ export function createAppWindow(): BrowserWindow {
 
   // Create the main window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 100,
-    x: Math.floor(screenWidth / 2) - 450,
+    width: 600,
+    height: 50,
+    x: Math.floor(screenWidth / 2) - 300,
     y: 10,
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
@@ -32,8 +32,9 @@ export function createAppWindow(): BrowserWindow {
     titleBarStyle: 'hiddenInset',
     title: 'CluelyHireMe',
     maximizable: false,
-    backgroundColor: '#1c1c1c',
     resizable: false,
+    backgroundMaterial: 'acrylic'
+
   })
 
   // Register IPC events for the main window.

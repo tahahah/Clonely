@@ -1,5 +1,5 @@
-import WelcomeKit from '@/app/components/welcome/WelcomeKit'
+import { Mainbar } from './components/mainbar/Mainbar'
 
 export default function App() {
-  return <WelcomeKit />
+  return <Mainbar />
 }

@@ -1,6 +1,12 @@
 @import './globals.css';
 @import './window.css';
 
+/* Ensure custom window frame is transparent */
+.window-frame {
+  background-color: transparent !important;
+}
+
+
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-size: 14px;
