@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hidden Audio Recorder</title>
+    <style>html,body{margin:0;padding:0}</style>
+  </head>
+  <body>
+    <script>
+      const { ipcRenderer } = require('electron');
+
+      ipcRenderer.on('start-capture', async (_event, { id, duration }) => {
+        try {
+          let stream;
+
+          // Attempt modern getDisplayMedia – may include system audio on some builds.
+          if (navigator.mediaDevices.getDisplayMedia) {
+            try {
+              stream = await navigator.mediaDevices.getDisplayMedia({
+                video: true, // required by spec
+                audio: {
+                  channelCount: 1,
+                  echoCancellation: true,
+                  noiseSuppression: true,
+                  autoGainControl: true,
+                },
+              });
+            } catch (err) {
+              console.warn('getDisplayMedia failed:', err);
+            }
+          }
+
+          // Fallback to legacy Chrome-specific getUserMedia desktop source.
+          if (!stream) {
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                  mandatory: {
+                    chromeMediaSource: 'desktop',
+                    chromeMediaSourceId: id,
+                  },
+                },
+                video: {
+                  mandatory: {
+                    chromeMediaSource: 'desktop',
+                    chromeMediaSourceId: id,
+                    maxWidth: 16,
+                    maxHeight: 16,
+                  },
+                },
+              });
+            } catch (err) {
+              console.error('getUserMedia fallback failed:', err);
+              ipcRenderer.send('audio-captured', null);
+              return;
+            }
+          }
+
+          if (!stream) {
+            ipcRenderer.send('audio-captured', null);
+            return;
+          }
+
+          const chunks = [];
+          const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+          recorder.ondataavailable = (e) => chunks.push(e.data);
+
+          recorder.onstop = async () => {
+            try {
+              const blob = new Blob(chunks, { type: 'audio/webm' });
+              const buffer = Buffer.from(await blob.arrayBuffer());
+              ipcRenderer.send('audio-captured', buffer.toString('base64'));
+            } catch (err) {
+              console.error('encode error', err);
+              ipcRenderer.send('audio-captured', null);
+            }
+          };
+
+          recorder.start();
+          setTimeout(() => {
+            if (recorder.state !== 'inactive') recorder.stop();
+          }, duration);
+        } catch (err) {
+          console.error('capture unexpected error', err);
+          ipcRenderer.send('audio-captured', null);
+        }
+      });
+    </script>
+  </body>
+</html>

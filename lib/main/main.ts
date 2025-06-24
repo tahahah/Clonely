@@ -5,8 +5,10 @@ import { ShortcutsHelper } from './shortcuts'
 import { appState, UIState } from '../state/AppStateMachine'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
+import { promises as fs } from 'fs'
 
 import { GeminiHelper } from '../llm/GeminiHelper'
+import { captureSystemAudio, cleanupAudioFile } from './audio'
 
 // On Windows, some graphics drivers can cause rendering issues or log harmless
 // warnings about pixel formats. These switches can help mitigate them.
@@ -79,9 +81,20 @@ app.whenReady().then(() => {
     if (next === UIState.Loading) {
       apiRequestController = new AbortController()
       const { signal } = apiRequestController
+      let audioFilePath: string | null = null
 
       try {
-        // 1. Capture the primary screen.
+        // --- Capture Phase ---
+        let audioBase64: string | undefined
+        try {
+          audioFilePath = await captureSystemAudio()
+          const audioData = await fs.readFile(audioFilePath)
+          audioBase64 = audioData.toString('base64')
+        } catch (e) {
+          console.error('[API] Could not capture audio, proceeding without it. Error:', e)
+          // audioBase64 remains undefined, which is handled by the Gemini helper
+        }
+
         const primaryDisplay = screen.getPrimaryDisplay()
         const { width, height } = primaryDisplay.size
         const sources = await desktopCapturer.getSources({
@@ -90,9 +103,7 @@ app.whenReady().then(() => {
         })
 
         const primaryScreenSource =
-          sources.find(
-            (source) => source.display_id === String(primaryDisplay.id)
-          ) || sources[0]
+          sources.find((source) => source.display_id === String(primaryDisplay.id)) || sources[0]
 
         if (!primaryScreenSource) {
           throw new Error('Could not find primary screen source for screenshot.')
@@ -107,8 +118,8 @@ app.whenReady().then(() => {
 
         const screenshotBase64 = screenshotPng.toString('base64')
 
-        // 2. Send the message and screenshot to the API.
-        const onChunk = (chunk: string) => {
+        // --- API Call Phase ---
+        const onChunk = (chunk: string): void => {
           if (!signal.aborted) {
             BrowserWindow.getAllWindows().forEach((win) => {
               if (!win.isDestroyed()) {
@@ -118,7 +129,13 @@ app.whenReady().then(() => {
           }
         }
 
-        await geminiHelper.sendMessageStream(currentInputValue, onChunk, signal, screenshotBase64)
+        await geminiHelper.sendMessageStream(
+          currentInputValue,
+          onChunk,
+          signal,
+          screenshotBase64,
+          audioBase64 // Pass undefined if capture failed
+        )
 
         if (!signal.aborted) {
           appState.dispatch('API_SUCCESS')
@@ -138,6 +155,10 @@ app.whenReady().then(() => {
           appState.dispatch('API_ERROR')
         }
       } finally {
+        if (audioFilePath) {
+          await cleanupAudioFile(audioFilePath)
+        }
+        // Clear the controller reference only if it's the one we created for this request
         if (apiRequestController?.signal === signal) {
           apiRequestController = null
         }

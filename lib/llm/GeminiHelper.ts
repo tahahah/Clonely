@@ -30,7 +30,8 @@ export class GeminiHelper {
     message: string,
     onChunk: (chunk: string) => void,
     signal: AbortSignal,
-    imageBase64?: string
+    imageBase64?: string,
+    audioBase64?: string
   ): Promise<void> {
     if (!this.chat) {
       throw new Error('Chat is not initialized.')
@@ -45,6 +46,15 @@ export class GeminiHelper {
         inlineData: {
           data: imageBase64,
           mimeType: 'image/png'
+        }
+      })
+    }
+
+    if (audioBase64) {
+      messageParts.push({
+        inlineData: {
+          data: audioBase64,
+          mimeType: 'audio/wav'
         }
       })
     }
