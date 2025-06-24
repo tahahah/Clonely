@@ -13,6 +13,7 @@ export function createAppWindow(): BrowserWindow {
     height: 50,
     x: Math.floor(screenWidth / 2) - 300,
     y: 10,
+    skipTaskbar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       sandbox: false
@@ -35,7 +36,7 @@ export function createAppWindow(): BrowserWindow {
   // Prevent the window from appearing in most software screen captures (Windows).
   mainWindow.setContentProtection(true)
   if (process.platform === 'win32') {
-    void import('./protectWindow')
+    void import('@/lib/main/protectWindow')
       .then(({ applyWindowCaptureProtection }) => {
         applyWindowCaptureProtection(mainWindow)
       })
@@ -75,6 +76,7 @@ export function createChatWindow(): BrowserWindow {
     height: Math.floor(screenHeight / 2),
     x: Math.floor(screenWidth / 2) - 300,
     y: 60,
+    skipTaskbar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       sandbox: false
@@ -96,7 +98,7 @@ export function createChatWindow(): BrowserWindow {
   // Prevent the window from appearing in most software screen captures (Windows).
   chatWindow.setContentProtection(true)
   if (process.platform === 'win32') {
-    void import('./protectWindow')
+    void import('@/lib/main/protectWindow')
       .then(({ applyWindowCaptureProtection }) => {
         applyWindowCaptureProtection(chatWindow)
       })
