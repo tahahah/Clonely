@@ -29,14 +29,27 @@ export class GeminiHelper {
   public async sendMessageStream(
     message: string,
     onChunk: (chunk: string) => void,
-    signal: AbortSignal
+    signal: AbortSignal,
+    imageBase64?: string
   ): Promise<void> {
     if (!this.chat) {
       throw new Error('Chat is not initialized.')
     }
     if (signal.aborted) return
 
-    const streamResult = await this.chat.sendMessageStream(message)
+    // The message can be a string or an array of parts (text, image, etc.)
+    const messageParts: (string | { inlineData: { data: string; mimeType: string } })[] = [message]
+
+    if (imageBase64) {
+      messageParts.push({
+        inlineData: {
+          data: imageBase64,
+          mimeType: 'image/png'
+        }
+      })
+    }
+
+    const streamResult = await this.chat.sendMessageStream(messageParts)
 
     for await (const chunk of streamResult.stream) {
       if (signal.aborted) {

@@ -6,7 +6,6 @@ import appIcon from '@/resources/build/icon.png?asset'
 export function createAppWindow(): BrowserWindow {
   const workArea = screen.getPrimaryDisplay().workAreaSize
   const screenWidth = workArea.width
-  const screenHeight = workArea.height
 
   // Create the main window.
   const mainWindow = new BrowserWindow({
@@ -16,7 +15,7 @@ export function createAppWindow(): BrowserWindow {
     y: 10,
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
-      sandbox: false,
+      sandbox: false
     },
     show: false,
     alwaysOnTop: true,
@@ -31,8 +30,10 @@ export function createAppWindow(): BrowserWindow {
     maximizable: false,
     resizable: false,
     backgroundMaterial: 'acrylic'
-
   })
+
+  // This prevents the window from being captured by screen capture APIs.
+  mainWindow.setContentProtection(true)
 
   // Register IPC events for the main window.
   registerWindowIPC(mainWindow)
@@ -53,7 +54,7 @@ export function createAppWindow(): BrowserWindow {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
-  return mainWindow;
+  return mainWindow
 }
 
 export function createChatWindow(): BrowserWindow {
@@ -69,7 +70,7 @@ export function createChatWindow(): BrowserWindow {
     y: 60,
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
-      sandbox: false,
+      sandbox: false
     },
     show: false,
     alwaysOnTop: true,
@@ -82,11 +83,13 @@ export function createChatWindow(): BrowserWindow {
     titleBarStyle: 'hiddenInset',
     title: 'Chat',
     maximizable: false,
-    resizable: false,
+    resizable: false
   })
 
-  registerChatWindowIPC(chatWindow);
+  // This prevents the window from being captured by screen capture APIs.
+  chatWindow.setContentProtection(true)
 
+  registerChatWindowIPC(chatWindow)
 
   chatWindow.on('ready-to-show', () => {
     chatWindow.show()
@@ -104,6 +107,5 @@ export function createChatWindow(): BrowserWindow {
   } else {
     chatWindow.loadFile(join(__dirname, '../renderer/ai.html'))
   }
-  console.log("Chat window created");
-  return chatWindow; 
+  return chatWindow
 }

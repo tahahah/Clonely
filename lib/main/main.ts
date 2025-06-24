@@ -1,22 +1,17 @@
-import { app, BrowserWindow, protocol, net, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, protocol, desktopCapturer, screen, net } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAppWindow, createChatWindow } from './app'
 import { ShortcutsHelper } from './shortcuts'
 import { appState, UIState } from '../state/AppStateMachine'
-import { join, resolve } from 'path'
+import { join } from 'path'
 import { pathToFileURL } from 'url'
 
 import { GeminiHelper } from '../llm/GeminiHelper'
 
-// Optional: Enables GPU acceleration for transparent windows on Windows
-// app.commandLine.appendSwitch('enable-transparent-visuals')
-
-// Disable GPU Acceleration for Windows 7
-if (process.platform === 'win32' && !app.isPackaged) {
-  app.disableHardwareAcceleration()
-}
-
-app.disableHardwareAcceleration();
+// On Windows, some graphics drivers can cause rendering issues or log harmless
+// warnings about pixel formats. These switches can help mitigate them.
+app.disableHardwareAcceleration()
+app.commandLine.appendSwitch('disable-direct-composition')
 
 // Register custom protocol for assets
 function registerResourcesProtocol() {
@@ -86,6 +81,33 @@ app.whenReady().then(() => {
       const { signal } = apiRequestController
 
       try {
+        // 1. Capture the primary screen.
+        const primaryDisplay = screen.getPrimaryDisplay()
+        const { width, height } = primaryDisplay.size
+        const sources = await desktopCapturer.getSources({
+          types: ['screen'],
+          thumbnailSize: { width, height }
+        })
+
+        const primaryScreenSource =
+          sources.find(
+            (source) => source.display_id === String(primaryDisplay.id)
+          ) || sources[0]
+
+        if (!primaryScreenSource) {
+          throw new Error('Could not find primary screen source for screenshot.')
+        }
+
+        const screenshotPng = primaryScreenSource.thumbnail.toPNG()
+
+        if (!screenshotPng || screenshotPng.length === 0) {
+          console.error('[Screenshot] Failed to capture screenshot, received empty image.')
+          throw new Error('Failed to capture screenshot.')
+        }
+
+        const screenshotBase64 = screenshotPng.toString('base64')
+
+        // 2. Send the message and screenshot to the API.
         const onChunk = (chunk: string) => {
           if (!signal.aborted) {
             BrowserWindow.getAllWindows().forEach((win) => {
@@ -96,7 +118,7 @@ app.whenReady().then(() => {
           }
         }
 
-        await geminiHelper.sendMessageStream(currentInputValue, onChunk, signal)
+        await geminiHelper.sendMessageStream(currentInputValue, onChunk, signal, screenshotBase64)
 
         if (!signal.aborted) {
           appState.dispatch('API_SUCCESS')
