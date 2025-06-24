@@ -1,7 +1,8 @@
 import { app, BrowserWindow, protocol, net } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { createAppWindow } from './app'
+import { createAppWindow, createChatWindow } from './app'
 import { ShortcutsHelper } from './shortcuts'
+import { appState, UIState } from '../state/AppStateMachine'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 
@@ -41,8 +42,67 @@ app.whenReady().then(() => {
   registerResourcesProtocol()
   // Create app window
   const mainWindow = createAppWindow()
-  const shortcutsHelper = new ShortcutsHelper(mainWindow);
+  let chatWindow: BrowserWindow | null = null
+  const shortcutsHelper = new ShortcutsHelper();
+  ;(global as any).appState = appState;
   shortcutsHelper.registerGlobalShortcuts();
+
+  appState.on('stateChange', ({ prev, next }) => {
+    console.log(`[State] Transition from ${prev} to ${next}`)
+
+    // Broadcast the state change to all windows
+    BrowserWindow.getAllWindows().forEach((win) => {
+      if (!win.isDestroyed()) {
+        win.webContents.send('state-changed', { prev, next })
+      }
+    })
+
+    // --- Window Existence Management ---
+    const shouldChatWindowExist = [
+      UIState.ReadyChat,
+      UIState.Loading,
+      UIState.Error
+    ].includes(next)
+    const chatWindowExists = chatWindow && !chatWindow.isDestroyed()
+
+    if (shouldChatWindowExist && !chatWindowExists) {
+      console.log('[State] Creating chat window')
+      chatWindow = createChatWindow()
+      chatWindow.on('closed', () => {
+        chatWindow = null
+        // If window is closed manually, it's like pressing ESC
+        if (
+          appState.state !== UIState.ActiveIdle &&
+          appState.state !== UIState.Hidden
+        ) {
+          appState.dispatch('ESC')
+        }
+      })
+    } else if (!shouldChatWindowExist && chatWindowExists) {
+      console.log('[State] Destroying chat window')
+      if (chatWindow) {
+        chatWindow.destroy()
+        chatWindow = null
+      }
+    }
+
+    // --- Window Visibility Management ---
+    const isAppVisible = next !== UIState.Hidden
+
+    if (isAppVisible) {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show()
+      if (chatWindow && !chatWindow.isDestroyed() && shouldChatWindowExist) {
+        chatWindow.show()
+        if (next === UIState.ReadyChat) {
+          chatWindow.focus()
+        }
+      }
+    } else {
+      // Hide everything
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide()
+      if (chatWindow && !chatWindow.isDestroyed()) chatWindow.hide()
+    }
+  });
 
 
   // Default open or close DevTools by F12 in development

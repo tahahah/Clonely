@@ -1,76 +1,39 @@
-import { globalShortcut, app } from "electron"
-import { BrowserWindow } from "electron"
-import { createChatWindow } from "./app";
+import { globalShortcut, app } from 'electron'
+import { appState, UIState } from '../state/AppStateMachine'
 
+/**
+ * Handles registration of global keyboard shortcuts.
+ * This class only dispatches events to the state machine and does not
+ * perform any window manipulations directly.
+ */
 export class ShortcutsHelper {
-    private mainWindow: BrowserWindow;
-    private chatWindow: BrowserWindow | null = null;
+  public registerGlobalShortcuts(): void {
+    globalShortcut.register('CommandOrControl+Space', () => {
+      console.log('[Shortcut] Dispatching TOGGLE_VISIBILITY')
+      appState.dispatch('TOGGLE_VISIBILITY')
+    })
 
-    constructor(mainWindow: BrowserWindow) {
-        this.mainWindow = mainWindow;
-    }
+    globalShortcut.register('CommandOrControl+Enter', () => {
+      const currentState = appState.state
+      console.log(`[Shortcut] Ctrl+Enter pressed in state: ${currentState}`)
 
-    public registerGlobalShortcuts(): void {
-        // Hide/Show the main window
-        globalShortcut.register("CommandOrControl+Space", async () => {
-            const mainVisible = this.mainWindow && !this.mainWindow.isDestroyed() && this.mainWindow.isVisible();
-            const chatVisible = this.chatWindow && !this.chatWindow.isDestroyed() && this.chatWindow.isVisible();
+      if (currentState === UIState.ActiveIdle) {
+        appState.dispatch('OPEN_CHAT')
+      } else if (
+        currentState === UIState.ReadyChat ||
+        currentState === UIState.Error
+      ) {
+        appState.dispatch('SUBMIT')
+      }
+    })
 
-            if (mainVisible || chatVisible) {
-                // If either is visible, hide both
-                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-                    this.mainWindow.hide();
-                }
-                if (this.chatWindow && !this.chatWindow.isDestroyed()) {
-                    this.chatWindow.hide();
-                }
-            } else {
-                // If both are hidden, show both
-                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-                    this.mainWindow.show();
-                }
-                if (this.chatWindow && !this.chatWindow.isDestroyed()) {
-                    this.chatWindow.show();
-                    this.chatWindow.focus(); // Bring chat window to foreground when shown
-                }
-            }
-        });
-
-        // Open/Focus the chat window
-        globalShortcut.register("CommandOrControl+Enter", async () => {
-            if (this.mainWindow.isVisible()) {
-
-                
-                if (this.chatWindow && !this.chatWindow.isDestroyed()) {
-                    this.chatWindow.show(); // Ensure it's visible
-                    this.chatWindow.focus(); // Bring it to the foreground
-                    
-                    console.log("Chat message sent");
-                    // TODO: Send message to chat window
-                } else {
-                    this.chatWindow = createChatWindow();
-                    this.chatWindow.on('closed', () => {
-                        this.chatWindow = null;
-                    });
-                }
-                this.chatWindow.show();
-                this.chatWindow.focus(); // Bring it to the foreground
-            }
-            });
-            
-            
-            // Destroy the chat window
-            globalShortcut.register("Escape", async () => {
-                if (this.chatWindow && !this.chatWindow.isDestroyed() && this.chatWindow.isVisible()) {
-                    this.chatWindow.destroy();
-                    this.chatWindow = null;
-                }
-            });
-            
-
+    globalShortcut.register('Escape', () => {
+      console.log('[Shortcut] Dispatching ESC')
+      appState.dispatch('ESC')
+    })
 
     // Unregister shortcuts when quitting
-    app.on("will-quit", () => {
+    app.on('will-quit', () => {
       globalShortcut.unregisterAll()
     })
   }
