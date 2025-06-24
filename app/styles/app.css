@@ -16,7 +16,26 @@ html, body {
   font-size: 15px;
   margin: 0;
   overflow: hidden;
-  color: rgba(0, 0, 0, 1)
+  color: rgba(0,0,0,1)
+}
+
+/* Modern Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 html,
