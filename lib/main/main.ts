@@ -5,10 +5,8 @@ import { ShortcutsHelper } from './shortcuts'
 import { appState, UIState } from '../state/AppStateMachine'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
-import { promises as fs } from 'fs'
 
 import { GeminiHelper } from '../llm/GeminiHelper'
-import { captureSystemAudio, cleanupAudioFile } from './audio'
 
 // On Windows, some graphics drivers can cause rendering issues or log harmless
 // warnings about pixel formats. These switches can help mitigate them.
@@ -81,19 +79,19 @@ app.whenReady().then(() => {
     if (next === UIState.Loading) {
       apiRequestController = new AbortController()
       const { signal } = apiRequestController
-      let audioFilePath: string | null = null
 
       try {
         // --- Capture Phase ---
-        let audioBase64: string | undefined
-        try {
-          audioFilePath = await captureSystemAudio()
-          const audioData = await fs.readFile(audioFilePath)
-          audioBase64 = audioData.toString('base64')
-        } catch (e) {
-          console.error('[API] Could not capture audio, proceeding without it. Error:', e)
-          // audioBase64 remains undefined, which is handled by the Gemini helper
-        }
+        // Audio capture is temporarily disabled as it's timing out.
+        const audioBase64: string | undefined = undefined;
+        // try {
+        //   audioFilePath = await captureSystemAudio()
+        //   const audioData = await fs.readFile(audioFilePath)
+        //   audioBase64 = audioData.toString('base64')
+        // } catch (e) {
+        //   console.error('[API] Could not capture audio, proceeding without it. Error:', e)
+        //   // audioBase64 remains undefined, which is handled by the Gemini helper
+        // }
 
         const primaryDisplay = screen.getPrimaryDisplay()
         const { width, height } = primaryDisplay.size
@@ -134,7 +132,7 @@ app.whenReady().then(() => {
           onChunk,
           signal,
           screenshotBase64,
-          audioBase64 // Pass undefined if capture failed
+          audioBase64 // Pass undefined
         )
 
         if (!signal.aborted) {
@@ -155,9 +153,9 @@ app.whenReady().then(() => {
           appState.dispatch('API_ERROR')
         }
       } finally {
-        if (audioFilePath) {
-          await cleanupAudioFile(audioFilePath)
-        }
+        // if (audioFilePath) {
+        //   await cleanupAudioFile(audioFilePath)
+        // }
         // Clear the controller reference only if it's the one we created for this request
         if (apiRequestController?.signal === signal) {
           apiRequestController = null

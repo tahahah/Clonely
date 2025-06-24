@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Input } from '../ui/input';
+import MarkdownRenderer from '../MarkdownRenderer';
 
 // Local copy of UIState enum to avoid importing main-process code that relies on Node modules.
 export enum UIState {
@@ -86,18 +87,33 @@ export const AI = () => {
       )
     }
 
-    // For both Loading and ReadyChat, we show the answer and input.
-    // The differences are handled by conditionals inside.
-    const isLoading = uiState === UIState.Loading
+    const isLoading = uiState === UIState.Loading;
+
+    let contentToDisplay;
+
+    if (errorMessage) {
+      contentToDisplay = (
+        <div className="p-4 text-red-500 glass rounded-lg w-full text-center">
+          {errorMessage}
+        </div>
+      );
+    } else if (isLoading && !answer) {
+      contentToDisplay = (
+        <div className="p-4 text-md glass rounded-lg w-full text-left min-h-[56px] max-h-[90%] overflow-y-auto animate-pulse">
+          Loading...
+        </div>
+      ); // Placeholder for loading animation
+    } else if (answer) {
+      contentToDisplay = (
+        <div className="p-4 text-md glass rounded-lg w-full text-left min-h-[56px] max-h-[90%] overflow-y-auto">
+          <MarkdownRenderer content={answer || ''} />
+        </div>
+      );
+    }
 
     return (
       <div className="flex flex-col w-full h-full gap-2">
-        {/* Show answer box if we have an answer OR if we are loading (to show the stream) */}
-        {(answer || isLoading) && (
-          <div className="p-4 text-white text-md glass rounded-lg w-full text-left min-h-[56px] max-h-[90%] overflow-y-auto">
-            {answer || ''}
-          </div>
-        )}
+        {contentToDisplay}
         <Input
           ref={inputRef}
           value={inputValue}
@@ -117,7 +133,7 @@ export const AI = () => {
   }
 
   return (
-    <div className="flex items-start justify-center h-full w-full bg-transparent p-2">
+    <div className="flex items-start justify-center h-full w-full bg-transparent p-2 font-sans">
       {renderContent()}
     </div>
   );
