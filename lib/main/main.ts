@@ -150,6 +150,7 @@ app.whenReady().then(() => {
       if (chatWindow) {
         chatWindow.destroy()
         chatWindow = null
+        currentInputValue = '';
       }
     }
   });
