@@ -3,8 +3,10 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAppWindow, createChatWindow } from './app'
 import { ShortcutsHelper } from './shortcuts'
 import { appState, UIState } from '../state/AppStateMachine'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { pathToFileURL } from 'url'
+
+import { GeminiHelper } from '../llm/GeminiHelper'
 
 // Optional: Enables GPU acceleration for transparent windows on Windows
 // app.commandLine.appendSwitch('enable-transparent-visuals')
@@ -47,6 +49,8 @@ app.whenReady().then(() => {
   ;(global as any).appState = appState;
   shortcutsHelper.registerGlobalShortcuts();
 
+  const geminiHelper = new GeminiHelper();
+
   let currentInputValue = '';
   ipcMain.on('input-changed', (_, value) => {
 
@@ -56,6 +60,10 @@ app.whenReady().then(() => {
   let apiRequestController: AbortController | null = null;
 
   appState.on('stateChange', async ({ prev, next }) => {
+    // Reset chat history when returning to idle
+    if (next === UIState.ActiveIdle) {
+      geminiHelper.resetChat();
+    }
 
 
     // Cancel any API request if we are moving away from the Loading state
@@ -74,48 +82,42 @@ app.whenReady().then(() => {
 
     // --- API Request Management ---
     if (next === UIState.Loading) {
-      apiRequestController = new AbortController();
-      const { signal } = apiRequestController;
-
+      apiRequestController = new AbortController()
+      const { signal } = apiRequestController
 
       try {
-        // Simulate a cancellable API call
-        const result = await new Promise((resolve, reject) => {
-          const timeoutId = setTimeout(() => resolve(`This is the AI answer for: ${currentInputValue}`), 3000);
-          signal.addEventListener('abort', () => {
-            clearTimeout(timeoutId);
-            reject(new DOMException('Aborted', 'AbortError'));
-          });
-        });
+        const onChunk = (chunk: string) => {
+          if (!signal.aborted) {
+            BrowserWindow.getAllWindows().forEach((win) => {
+              if (!win.isDestroyed()) {
+                win.webContents.send('api-stream-chunk', chunk)
+              }
+            })
+          }
+        }
 
+        await geminiHelper.sendMessageStream(currentInputValue, onChunk, signal)
 
         if (!signal.aborted) {
-          // Send result to the UI before transitioning state
-          BrowserWindow.getAllWindows().forEach((win) => {
-            if (!win.isDestroyed()) {
-              win.webContents.send('api-result', result);
-            }
-          });
-          appState.dispatch('API_SUCCESS');
+          appState.dispatch('API_SUCCESS')
         }
       } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          // Request was aborted, do nothing.
+        if (signal.aborted) {
+          console.error('[API] Request was aborted by state change.')
         } else {
-          console.error('[API] Request failed:', error);
-          // Send error details to the UI
-          const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+          console.error('[API] Request failed:', error)
+          const errorMessage =
+            error instanceof Error ? error.message : 'An unknown error occurred'
           BrowserWindow.getAllWindows().forEach((win) => {
             if (!win.isDestroyed()) {
-              win.webContents.send('api-error', errorMessage);
+              win.webContents.send('api-error', errorMessage)
             }
-          });
-          appState.dispatch('API_ERROR');
+          })
+          appState.dispatch('API_ERROR')
         }
       } finally {
-        // Ensure the controller is cleaned up
         if (apiRequestController?.signal === signal) {
-          apiRequestController = null;
+          apiRequestController = null
         }
       }
     }
