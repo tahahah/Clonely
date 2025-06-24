@@ -82,7 +82,7 @@ export const AI = () => {
     return (
       <div className="flex flex-col items-center justify-center w-full gap-2">
         {answer && (
-          <div className="p-4 text-white text-lg glass rounded-lg w-full text-left">
+          <div className="p-4 text-white text-md glass rounded-lg w-full text-left">
             {answer}
           </div>
         )}
@@ -98,7 +98,7 @@ export const AI = () => {
   };
 
   return (
-    <div className="flex items-center justify-center h-full w-full bg-transparent p-2">
+    <div className="flex items-start justify-center h-full w-full bg-transparent p-2">
       {renderContent()}
     </div>
   );

@@ -35,20 +35,23 @@ export class ShortcutsHelper {
       const chatWindow = this.getChatWindow();
 
       // If chat window exists but is not focused, just focus it.
-      if (chatWindow && !chatWindow.isDestroyed() && !chatWindow.isFocused()) {
-        chatWindow.show(); // .show() brings to front and focuses.
-      } else {
-        // Otherwise, dispatch event based on current state.
-        const currentState = appState.state;
-        if (currentState === UIState.ActiveIdle) {
-          appState.dispatch('OPEN_CHAT');
-        } else if (
-          currentState === UIState.ReadyChat ||
-          currentState === UIState.Error
-        ) {
-          appState.dispatch('SUBMIT');
-        }
+      if (this.mainWindow.isVisible()){
+          if (chatWindow && !chatWindow.isDestroyed() && !chatWindow.isFocused() ) {
+            chatWindow.show(); // .show() brings to front and focuses.
+          } else {
+            // Otherwise, dispatch event based on current state.
+            const currentState = appState.state;
+            if (currentState === UIState.ActiveIdle) {
+              appState.dispatch('OPEN_CHAT');
+            } else if (
+              currentState === UIState.ReadyChat ||
+              currentState === UIState.Error
+            ) {
+              appState.dispatch('SUBMIT');
+            }
+          }
       }
+
     });
 
     globalShortcut.register('Escape', () => {

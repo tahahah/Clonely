@@ -64,7 +64,7 @@ export function createChatWindow(): BrowserWindow {
   // Create the main window.
   const chatWindow = new BrowserWindow({
     width: 600,
-    height: 100,
+    height: Math.floor(screenHeight / 3),
     x: Math.floor(screenWidth / 2) - 300,
     y: 60,
     webPreferences: {
