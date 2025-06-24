@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Input } from '../ui/input';
+import { Command, CornerDownLeft } from 'lucide-react';
 import MarkdownRenderer from '../MarkdownRenderer';
 
 // Local copy of UIState enum to avoid importing main-process code that relies on Node modules.
@@ -99,13 +100,13 @@ export const AI = () => {
       );
     } else if (isLoading && !answer) {
       contentToDisplay = (
-        <div className="p-4 text-md glass rounded-lg w-full text-left min-h-[56px] max-h-[90%] overflow-y-auto animate-pulse">
+        <div className="p-4 text-md glass rounded-lg w-full text-left min-h-[56px] max-h-[90%] overflow-y-auto overflow-x-hidden animate-pulse">
           Loading...
         </div>
       ); // Placeholder for loading animation
     } else if (answer) {
       contentToDisplay = (
-        <div className="p-4 text-md glass rounded-lg w-full text-left min-h-[56px] max-h-[90%] overflow-y-auto">
+        <div className="p-4 text-md glass rounded-lg w-full text-left min-h-[56px] max-h-[90%] overflow-y-auto overflow-x-hidden">
           <MarkdownRenderer content={answer || ''} />
         </div>
       );
@@ -114,20 +115,26 @@ export const AI = () => {
     return (
       <div className="flex flex-col w-full h-full gap-2">
         {contentToDisplay}
-        <Input
-          ref={inputRef}
-          value={inputValue}
-          onChange={handleInputChange}
-          placeholder={
-            isLoading
-              ? 'Generating answer...'
-              : answer
-              ? 'Ask a follow-up...'
-              : 'Ask me anything...'
-          }
-          className="glass m-1 rounded-full w-full"
-          disabled={isLoading}
-        />
+        <div className="relative w-full">
+          <Input
+            ref={inputRef}
+            value={inputValue}
+            onChange={handleInputChange}
+            placeholder={
+              isLoading
+                ? 'Generating answer...'
+                : answer
+                ? 'Ask a follow-up...'
+                : 'Ask me anything...'
+            }
+            className="glass m-1 rounded-full w-full pr-16"
+            disabled={isLoading}
+          />
+          <div className="absolute inset-y-0 right-4 flex items-center gap-1 pointer-events-none text-muted-foreground">
+            <Command className="size-4" />
+            <CornerDownLeft className="size-4" />
+          </div>
+        </div>
       </div>
     )
   }

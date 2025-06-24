@@ -50,6 +50,11 @@ app.whenReady().then(() => {
   ipcMain.on('input-changed', (_, value) => {
 
     currentInputValue = value;
+});
+
+// Renderer requests to open chat via main bar
+ipcMain.on('open-chat', () => {
+  appState.dispatch('OPEN_CHAT');
   });
 
   let apiRequestController: AbortController | null = null;
