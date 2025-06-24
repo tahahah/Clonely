@@ -63,9 +63,9 @@ export function createChatWindow(): BrowserWindow {
 
   // Create the main window.
   const chatWindow = new BrowserWindow({
-    width: 300,
-    height: 60,
-    x: Math.floor(screenWidth / 2) - 150,
+    width: 600,
+    height: 100,
+    x: Math.floor(screenWidth / 2) - 300,
     y: 60,
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),

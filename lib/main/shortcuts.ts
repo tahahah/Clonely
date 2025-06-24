@@ -32,21 +32,27 @@ export class ShortcutsHelper {
 
     // Other shortcuts still drive state machine
     globalShortcut.register('CommandOrControl+Enter', () => {
-      const currentState = appState.state
-      console.log(`[Shortcut] Ctrl+Enter pressed in state: ${currentState}`)
+      const chatWindow = this.getChatWindow();
 
-      if (currentState === UIState.ActiveIdle) {
-        appState.dispatch('OPEN_CHAT')
-      } else if (
-        currentState === UIState.ReadyChat ||
-        currentState === UIState.Error
-      ) {
-        appState.dispatch('SUBMIT')
+      // If chat window exists but is not focused, just focus it.
+      if (chatWindow && !chatWindow.isDestroyed() && !chatWindow.isFocused()) {
+        chatWindow.show(); // .show() brings to front and focuses.
+      } else {
+        // Otherwise, dispatch event based on current state.
+        const currentState = appState.state;
+        if (currentState === UIState.ActiveIdle) {
+          appState.dispatch('OPEN_CHAT');
+        } else if (
+          currentState === UIState.ReadyChat ||
+          currentState === UIState.Error
+        ) {
+          appState.dispatch('SUBMIT');
+        }
       }
-    })
+    });
 
     globalShortcut.register('Escape', () => {
-      console.log('[Shortcut] Dispatching ESC')
+
       appState.dispatch('ESC')
     })
 

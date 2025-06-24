@@ -49,20 +49,77 @@ app.whenReady().then(() => {
 
   let currentInputValue = '';
   ipcMain.on('input-changed', (_, value) => {
-    console.log(`[IPC] Input changed: ${value}`);
+
     currentInputValue = value;
   });
 
-  appState.on('stateChange', ({ prev, next }) => {
-    console.log(`[State] Transition from ${prev} to ${next}`)
+  let apiRequestController: AbortController | null = null;
+
+  appState.on('stateChange', async ({ prev, next }) => {
+
+
+    // Cancel any API request if we are moving away from the Loading state
+    if (prev === UIState.Loading && next !== UIState.Loading) {
+
+      apiRequestController?.abort();
+      apiRequestController = null;
+    }
 
     // Broadcast the state change to all windows
     BrowserWindow.getAllWindows().forEach((win) => {
       if (!win.isDestroyed()) {
-        win.webContents.send('state-changed', { prev, next })
+        win.webContents.send('state-changed', { prev, next });
       }
-    })
+    });
 
+    // --- API Request Management ---
+    if (next === UIState.Loading) {
+      apiRequestController = new AbortController();
+      const { signal } = apiRequestController;
+
+
+      try {
+        // Simulate a cancellable API call
+        const result = await new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => resolve(`This is the AI answer for: ${currentInputValue}`), 3000);
+          signal.addEventListener('abort', () => {
+            clearTimeout(timeoutId);
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        });
+
+
+        if (!signal.aborted) {
+          // Send result to the UI before transitioning state
+          BrowserWindow.getAllWindows().forEach((win) => {
+            if (!win.isDestroyed()) {
+              win.webContents.send('api-result', result);
+            }
+          });
+          appState.dispatch('API_SUCCESS');
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          // Request was aborted, do nothing.
+        } else {
+          console.error('[API] Request failed:', error);
+          // Send error details to the UI
+          const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+          BrowserWindow.getAllWindows().forEach((win) => {
+            if (!win.isDestroyed()) {
+              win.webContents.send('api-error', errorMessage);
+            }
+          });
+          appState.dispatch('API_ERROR');
+        }
+      } finally {
+        // Ensure the controller is cleaned up
+        if (apiRequestController?.signal === signal) {
+          apiRequestController = null;
+        }
+      }
+    }
+    
     // --- Window Existence Management ---
     const shouldChatWindowExist = [
       UIState.ReadyChat,
@@ -72,26 +129,29 @@ app.whenReady().then(() => {
     const chatWindowExists = chatWindow && !chatWindow.isDestroyed()
 
     if (shouldChatWindowExist && !chatWindowExists) {
-      console.log('[State] Creating chat window')
       chatWindow = createChatWindow()
+
+      // Send the last known input value to the new window
+      chatWindow.webContents.on('did-finish-load', () => {
+        if (chatWindow && !chatWindow.isDestroyed()) {
+          chatWindow.webContents.send('set-initial-input', currentInputValue)
+        }
+      })
+
       chatWindow.on('closed', () => {
         chatWindow = null
         // If window is closed manually, it's like pressing ESC
-        if (
-          appState.state !== UIState.ActiveIdle
-        ) {
+        if (appState.state !== UIState.ActiveIdle) {
           appState.dispatch('ESC')
         }
       })
     } else if (!shouldChatWindowExist && chatWindowExists) {
-      console.log('[State] Destroying chat window')
+
       if (chatWindow) {
         chatWindow.destroy()
         chatWindow = null
       }
     }
-
-
   });
 
 
