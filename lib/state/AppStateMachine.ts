@@ -19,7 +19,6 @@ import { EventEmitter } from 'events'
  */
 
 export enum UIState {
-  Hidden = 'HIDDEN',
   ActiveIdle = 'ACTIVE_IDLE',
   ReadyChat = 'READY_CHAT',
   Loading = 'LOADING',
@@ -27,7 +26,6 @@ export enum UIState {
 }
 
 export type StateEvent =
-  | 'TOGGLE_VISIBILITY' // Ctrl+Space
   | 'OPEN_CHAT' // Ctrl+Enter from main bar
   | 'SUBMIT' // Enter within chat
   | 'API_SUCCESS'
@@ -67,33 +65,26 @@ export class AppStateMachine extends EventEmitter {
   /** Transition table */
   private nextState(current: UIState, event: StateEvent): UIState {
     switch (current) {
-      case UIState.Hidden:
-        if (event === 'TOGGLE_VISIBILITY') return UIState.ActiveIdle
-        return current
 
       case UIState.ActiveIdle:
-        if (event === 'TOGGLE_VISIBILITY') return UIState.Hidden
-        if (event === 'OPEN_CHAT') return UIState.ReadyChat
-        return current
+         if (event === 'OPEN_CHAT') return UIState.ReadyChat
+         return current
 
       case UIState.ReadyChat:
-        if (event === 'TOGGLE_VISIBILITY') return UIState.Hidden
-        if (event === 'ESC') return UIState.ActiveIdle
-        if (event === 'SUBMIT') return UIState.Loading
-        return current
+         if (event === 'ESC') return UIState.ActiveIdle
+         if (event === 'SUBMIT') return UIState.Loading
+         return current
 
       case UIState.Loading:
-        if (event === 'TOGGLE_VISIBILITY') return UIState.Hidden
-        if (event === 'ESC') return UIState.ActiveIdle
-        if (event === 'API_SUCCESS') return UIState.ReadyChat
-        if (event === 'API_ERROR') return UIState.Error
-        return current
+         if (event === 'ESC') return UIState.ActiveIdle
+         if (event === 'API_SUCCESS') return UIState.ReadyChat
+         if (event === 'API_ERROR') return UIState.Error
+         return current
 
       case UIState.Error:
-        if (event === 'TOGGLE_VISIBILITY') return UIState.Hidden
-        if (event === 'ESC') return UIState.ActiveIdle
-        if (event === 'SUBMIT') return UIState.Loading
-        return current
+         if (event === 'ESC') return UIState.ActiveIdle
+         if (event === 'SUBMIT') return UIState.Loading
+         return current
     }
   }
 }

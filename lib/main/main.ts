@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol, net } from 'electron'
+import { app, BrowserWindow, protocol, net, ipcMain } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAppWindow, createChatWindow } from './app'
 import { ShortcutsHelper } from './shortcuts'
@@ -43,9 +43,15 @@ app.whenReady().then(() => {
   // Create app window
   const mainWindow = createAppWindow()
   let chatWindow: BrowserWindow | null = null
-  const shortcutsHelper = new ShortcutsHelper();
+  const shortcutsHelper = new ShortcutsHelper(mainWindow, () => chatWindow);
   ;(global as any).appState = appState;
   shortcutsHelper.registerGlobalShortcuts();
+
+  let currentInputValue = '';
+  ipcMain.on('input-changed', (_, value) => {
+    console.log(`[IPC] Input changed: ${value}`);
+    currentInputValue = value;
+  });
 
   appState.on('stateChange', ({ prev, next }) => {
     console.log(`[State] Transition from ${prev} to ${next}`)
@@ -72,8 +78,7 @@ app.whenReady().then(() => {
         chatWindow = null
         // If window is closed manually, it's like pressing ESC
         if (
-          appState.state !== UIState.ActiveIdle &&
-          appState.state !== UIState.Hidden
+          appState.state !== UIState.ActiveIdle
         ) {
           appState.dispatch('ESC')
         }
@@ -86,22 +91,7 @@ app.whenReady().then(() => {
       }
     }
 
-    // --- Window Visibility Management ---
-    const isAppVisible = next !== UIState.Hidden
 
-    if (isAppVisible) {
-      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show()
-      if (chatWindow && !chatWindow.isDestroyed() && shouldChatWindowExist) {
-        chatWindow.show()
-        if (next === UIState.ReadyChat) {
-          chatWindow.focus()
-        }
-      }
-    } else {
-      // Hide everything
-      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide()
-      if (chatWindow && !chatWindow.isDestroyed()) chatWindow.hide()
-    }
   });
 
 
