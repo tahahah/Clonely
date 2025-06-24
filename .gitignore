@@ -6,3 +6,6 @@ out
 temp
 .windsurf*
 .env
+
+# Ignore native addon build artifacts
+native/screen_protection/build

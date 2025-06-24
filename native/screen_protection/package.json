@@ -1,0 +1,10 @@
+{
+  "name": "screen_protection",
+  "version": "0.1.0",
+  "description": "Native addon that applies SetWindowDisplayAffinity to exclude an Electron window from capture.",
+  "main": "index.js",
+  "gypfile": true,
+  "dependencies": {
+    "node-addon-api": "^8.4.0"
+  }
+}

@@ -22,7 +22,8 @@
     "build:unpack": "run-s vite:build:app electron:build:dir",
     "build:win": "run-s vite:build:app electron:build:win",
     "build:mac": "run-s vite:build:app electron:build:mac",
-    "build:linux": "run-s vite:build:app electron:build:linux"
+    "build:linux": "run-s vite:build:app electron:build:linux",
+    "rebuild:native": "electron-rebuild -f -w screen_protection"
   },
   "repository": {
     "type": "git",
@@ -44,8 +45,11 @@
     "clsx": "^2.1.1",
     "dotenv": "^16.5.0",
     "lucide-react": "^0.511.0",
+    "node-addon-api": "^8.4.0",
+    "node-gyp-build": "^4.8.4",
     "tailwind-merge": "^3.3.0",
-    "tw-animate-css": "^1.3.2"
+    "tw-animate-css": "^1.3.2",
+    "screen_protection": "file:native/screen_protection"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
@@ -59,6 +63,7 @@
     "@vitejs/plugin-react": "^4.5.0",
     "electron": "^36.3.2",
     "electron-builder": "^26.0.12",
+    "electron-rebuild": "^3.2.9",
     "electron-vite": "^3.1.0",
     "eslint": "^9.28.0",
     "eslint-plugin-react": "^7.37.5",
