@@ -15,7 +15,7 @@ export class GeminiHelper {
   private chat: ChatSession | null = null
   private model: GenerativeModel
 
-  constructor(modelName = 'gemini-2.5-flash') {
+  constructor(modelName = 'gemini-2.5-flash-lite-preview-06-17') {
     this.model = genAI.getGenerativeModel({ model: modelName })
     this.startNewChat() 
   }
