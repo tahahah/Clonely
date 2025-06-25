@@ -1,4 +1,5 @@
 import { BrowserWindow, shell, app, screen } from 'electron'
+
 import { join } from 'path'
 import { registerWindowIPC, registerChatWindowIPC } from '@/lib/window/ipcEvents'
 import appIcon from '@/resources/build/icon.png?asset'
@@ -34,14 +35,14 @@ export function createAppWindow(): BrowserWindow {
   })
 
   // Prevent the window from appearing in most software screen captures (Windows).
-  mainWindow.setContentProtection(true)
-  if (process.platform === 'win32') {
-    void import('@/lib/main/protectWindow')
-      .then(({ applyWindowCaptureProtection }) => {
-        applyWindowCaptureProtection(mainWindow)
-      })
-      .catch(() => {})
-  }
+  // mainWindow.setContentProtection(true)
+  // if (process.platform === 'win32') {
+  //   void import('@/lib/main/protectWindow')
+  //     .then(({ applyWindowCaptureProtection }) => {
+  //       applyWindowCaptureProtection(mainWindow)
+  //     })
+  //     .catch(() => {})
+  // }
 
   // Register IPC events for the main window.
   registerWindowIPC(mainWindow)
@@ -96,14 +97,14 @@ export function createChatWindow(): BrowserWindow {
   })
 
   // Prevent the window from appearing in most software screen captures (Windows).
-  chatWindow.setContentProtection(true)
-  if (process.platform === 'win32') {
-    void import('@/lib/main/protectWindow')
-      .then(({ applyWindowCaptureProtection }) => {
-        applyWindowCaptureProtection(chatWindow)
-      })
-      .catch(() => {})
-  }
+  // chatWindow.setContentProtection(true)
+  // if (process.platform === 'win32') {
+  //   void import('@/lib/main/protectWindow')
+  //     .then(({ applyWindowCaptureProtection }) => {
+  //       applyWindowCaptureProtection(chatWindow)
+  //     })
+  //     .catch(() => {})
+  // }
 
   registerChatWindowIPC(chatWindow)
 

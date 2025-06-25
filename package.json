@@ -38,12 +38,14 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@google/genai": "^1.6.0",
     "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^16.5.0",
+    "electron-audio-loopback": "^1.0.3",
     "katex": "^0.16.22",
     "lucide-react": "^0.511.0",
     "node-addon-api": "^8.4.0",
@@ -56,7 +58,8 @@
     "screen_protection": "file:native/screen_protection",
     "tailwind-merge": "^3.3.0",
     "tw-animate-css": "^1.3.2",
-    "unified": "^11.0.5"
+    "unified": "^11.0.5",
+    "wavefile": "^11.0.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",

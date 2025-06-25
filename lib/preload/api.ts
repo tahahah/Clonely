@@ -1,6 +1,9 @@
-import { ipcRenderer } from 'electron'
+import { ipcRenderer } from 'electron';
+
 
 const api = {
+  enableLoopback: (): Promise<void> => ipcRenderer.invoke('enable-loopback-audio'),
+  disableLoopback: (): Promise<void> => ipcRenderer.invoke('disable-loopback-audio'),
   send: (channel: string, ...args: any[]) => {
     ipcRenderer.send(channel, ...args)
   },

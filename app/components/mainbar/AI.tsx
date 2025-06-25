@@ -3,6 +3,7 @@ import { Input } from '../ui/input';
 import { Command, CornerDownLeft } from 'lucide-react';
 import MarkdownRenderer from '../MarkdownRenderer';
 
+
 // Local copy of UIState enum to avoid importing main-process code that relies on Node modules.
 export enum UIState {
   ActiveIdle = 'ACTIVE_IDLE',
@@ -39,8 +40,16 @@ export const AI = () => {
       }
     }
 
-    const handleStreamChunk = (chunk: string) => {
-      setAnswer((prev) => (prev || '') + chunk)
+    interface ChatChunk { text?: string; reset?: boolean }
+
+    const handleStreamChunk = (chunk: ChatChunk) => {
+      if (chunk.reset) {
+        setAnswer('')
+        return
+      }
+      if (chunk.text) {
+        setAnswer((prev) => (prev || '') + chunk.text)
+      }
     }
 
     const handleApiError = (error: string) => {
@@ -53,7 +62,7 @@ export const AI = () => {
 
     // Listen for state changes from the main process
     window.api.receive('state-changed', handleStateChange)
-    window.api.receive('api-stream-chunk', handleStreamChunk)
+    window.api.receive('api-stream-chunk', handleStreamChunk as any);
     window.api.receive('api-error', handleApiError)
     window.api.receive('set-initial-input', handleSetInitialInput)
 

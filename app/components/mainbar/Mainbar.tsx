@@ -1,6 +1,7 @@
-import { Mic, SettingsIcon, Command, CornerDownLeft, Space } from "lucide-react"
-import { useEffect, useState } from "react"
-import { Button } from "../ui/button"
+import { Mic, SettingsIcon, Command, CornerDownLeft, Space } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Button } from '../ui/button';
+import { startAudioCapture, stopAudioCapture, AudioCaptureStreams } from '../../lib/audio';
 
 export enum UIState {
   ActiveIdle = 'ACTIVE_IDLE',
@@ -10,56 +11,137 @@ export enum UIState {
 }
 
 export const Mainbar = () => {
-    const [chatActive, setChatActive] = useState(false);
+  const [chatActive, setChatActive] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
 
-    useEffect(() => {
-        const handleStateChange = ({ next }: { prev: UIState; next: UIState }) => {
-            setChatActive([UIState.ReadyChat, UIState.Loading, UIState.Error].includes(next));
-        };
-        window.api.receive('state-changed', handleStateChange);
-        return () => window.api.removeAllListeners('state-changed');
-    }, []);
+  // we no longer use MediaRecorder (webm not supported by Gemini)
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const audioStreamsRef = useRef<AudioCaptureStreams | null>(null);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    const handleChatClick = () => {
-        window.api.send('open-chat');
+  useEffect(() => {
+    const handleStateChange = ({ next }: { prev: UIState; next: UIState }) => {
+      setChatActive([UIState.ReadyChat, UIState.Loading, UIState.Error].includes(next));
     };
+    window.api.receive('state-changed', handleStateChange);
+    return () => window.api.removeAllListeners('state-changed');
+  }, []);
 
-    return (
-            <div className="w-full h-16 pl-5 pr-5 glass rounded-full font-sans">
-                <div className="flex items-center justify-between w-full h-full">
-                    {/* Left - Chat button */}
-                    <div className="flex items-center gap-2">
-                        <Button variant={chatActive ? "secondary" : "ghost"} size="sm" onClick={handleChatClick}>
-                            <span>Chat</span>
-                            <Command />
-                            <CornerDownLeft />
-                        </Button>
-                    </div>
+  const handleChatClick = () => {
+    window.api.send('open-chat');
+  };
 
-                    {/* Middle - Show/Hide */}
-                    <div className="flex items-center gap-2">       
-                        <Button variant="ghost" size="sm">
-                            <span>Hide</span>
-                            <Command />
-                            <Space />
-                        </Button>
-                    </div>
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${minutes}:${secs}`;
+  };
 
-                    {/* Right - Microphone and recording */}
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm">
-                            <span>00:00</span>
-                            <Mic />
-                        </Button>
-                    </div>
+  const handleMicClick = async () => {
+    if (isRecording) {
+      // stop recording
+      window.api.send('live-audio-done');
 
-                    {/* Right - Settings button */}
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm">
-                            <SettingsIcon />
-                        </Button>
-                    </div>
-                </div>
-            </div>
-    )
-}
+      // Clean up audio nodes
+      processorRef.current?.disconnect();
+      audioCtxRef.current?.close();
+      processorRef.current = null;
+      audioCtxRef.current = null;
+
+      if (audioStreamsRef.current) {
+        await stopAudioCapture(audioStreamsRef.current);
+        audioStreamsRef.current = null;
+      }
+
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+      setRecordingTime(0);
+      setIsRecording(false);
+    } else {
+      try {
+        const streams = await startAudioCapture();
+        audioStreamsRef.current = streams;
+
+        // ---- PCM streaming setup ----
+        const ctx = new AudioContext({ sampleRate: 16000 });
+        await ctx.resume();
+        audioCtxRef.current = ctx;
+
+        const sourceNode = ctx.createMediaStreamSource(streams.combinedStream);
+        const processor = ctx.createScriptProcessor(4096, 1, 1);
+        processorRef.current = processor;
+
+        processor.onaudioprocess = (e) => {
+          const input = e.inputBuffer.getChannelData(0);
+          // Convert Float32 [-1,1] to 16-bit PCM little-endian
+          const pcm = new Int16Array(input.length);
+          for (let i = 0; i < input.length; i++) {
+            const s = Math.max(-1, Math.min(1, input[i]));
+            pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
+          window.api.send('live-audio-chunk', new Uint8Array(pcm.buffer));
+        };
+
+        sourceNode.connect(processor);
+        processor.connect(ctx.destination); // required in some browsers
+
+        setIsRecording(true);
+        // Notify main to start Gemini session
+        window.api.send('open-chat');
+        window.api.send('live-audio-start');
+        setRecordingTime(0); // Reset timer
+        recordingIntervalRef.current = setInterval(() => {
+          setRecordingTime((prevTime) => prevTime + 1);
+        }, 1000);
+      } catch (error) {
+        console.error('Failed to start recording:', error);
+        if (audioStreamsRef.current) {
+          await stopAudioCapture(audioStreamsRef.current);
+        }
+        setIsRecording(false);
+      }
+    }
+  };
+
+  return (
+    <div className="w-full h-16 pl-5 pr-5 glass rounded-full font-sans">
+      <div className="flex items-center justify-between w-full h-full">
+        {/* Left - Chat button */}
+        <div className="flex items-center gap-2">
+          <Button variant={chatActive ? 'secondary' : 'ghost'} size="sm" onClick={handleChatClick}>
+            <span>Chat</span>
+            <Command />
+            <CornerDownLeft />
+          </Button>
+        </div>
+
+        {/* Middle - Show/Hide */}
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm">
+            <span>Hide</span>
+            <Command />
+            <Space />
+          </Button>
+        </div>
+
+        {/* Right - Microphone and recording */}
+        <div className="flex items-center gap-2">
+          <Button variant={isRecording ? 'destructive' : 'ghost'} size="sm" onClick={handleMicClick}>
+            <span>{formatTime(recordingTime)}</span>
+            <Mic className={isRecording ? 'animate-pulse text-red-500' : ''} />
+          </Button>
+        </div>
+
+        {/* Right - Settings button */}
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm">
+            <SettingsIcon />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};

@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, protocol, desktopCapturer, screen, net } from 'electron'
+import { app, BrowserWindow, ipcMain, protocol, net, screen, desktopCapturer } from 'electron'
+import { AudioHelper } from '../audio/AudioHelper'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAppWindow, createChatWindow } from './app'
 import { ShortcutsHelper } from './shortcuts'
@@ -6,7 +7,12 @@ import { appState, UIState } from '../state/AppStateMachine'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 
+
 import { GeminiHelper } from '../llm/GeminiHelper'
+import { GeminiLiveHelper } from '../llm/GeminiLiveHelper'
+
+// Initialize audio capture functionality before the app is ready.
+AudioHelper.initialize();
 
 // On Windows, some graphics drivers can cause rendering issues or log harmless
 // warnings about pixel formats. These switches can help mitigate them.
@@ -57,6 +63,26 @@ ipcMain.on('open-chat', () => {
   appState.dispatch('OPEN_CHAT');
   });
 
+  // ---- Gemini Live Audio IPC wiring ----
+  const geminiLiveHelper = new GeminiLiveHelper();
+
+  ipcMain.on('live-audio-start', () => {
+    geminiLiveHelper.startSession((chunk) => {
+      BrowserWindow.getAllWindows().forEach((win) => {
+        if (win.isDestroyed()) return;
+        win.webContents.send('api-stream-chunk', chunk);
+      });
+    });
+  });
+
+  ipcMain.on('live-audio-chunk', (_event, chunk: Uint8Array) => {
+    geminiLiveHelper.sendAudioChunk(chunk);
+  });
+
+  ipcMain.on('live-audio-done', () => {
+    geminiLiveHelper.finishTurn();
+  });
+
   let apiRequestController: AbortController | null = null;
 
   appState.on('stateChange', async ({ prev, next }) => {
@@ -87,24 +113,8 @@ ipcMain.on('open-chat', () => {
 
       try {
         // --- Capture Phase ---
-        // Audio capture is temporarily disabled as it's timing out.
-        const audioBase64: string | undefined = undefined;
-        // try {
-        //   audioFilePath = await captureSystemAudio()
-        //   const audioData = await fs.readFile(audioFilePath)
-        //   audioBase64 = audioData.toString('base64')
-        // } catch (e) {
-        //   console.error('[API] Could not capture audio, proceeding without it. Error:', e)
-        //   // audioBase64 remains undefined, which is handled by the Gemini helper
-        // }
-
         const primaryDisplay = screen.getPrimaryDisplay()
-        const { width, height } = primaryDisplay.size
-        const sources = await desktopCapturer.getSources({
-          types: ['screen'],
-          thumbnailSize: { width, height }
-        })
-
+        const sources = await desktopCapturer.getSources({ types: ['screen'] })
         const primaryScreenSource =
           sources.find((source) => source.display_id === String(primaryDisplay.id)) || sources[0]
 
@@ -137,7 +147,7 @@ ipcMain.on('open-chat', () => {
           onChunk,
           signal,
           screenshotBase64,
-          audioBase64 // Pass undefined
+          undefined // Audio is now handled separately
         )
 
         if (!signal.aborted) {
