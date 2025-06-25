@@ -1,4 +1,4 @@
-import { Mic, LogOut, Command, CornerDownLeft, Space, Eye, EyeOff } from 'lucide-react';
+import { Mic, X, Command, CornerDownLeft, Space, Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { Button } from '../ui/button';
 
@@ -191,7 +191,7 @@ export const Mainbar = () => {
         {/* Right - Quit button */}
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => window.api.send('quit-app')} title="Quit App">
-            <LogOut />
+            <X />
           </Button>
         </div>
       </div>
