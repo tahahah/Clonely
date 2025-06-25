@@ -44,9 +44,50 @@ app.whenReady().then(() => {
   // Register custom protocol for assets
   registerResourcesProtocol()
   // Create app window
-  const mainWindow = createAppWindow()
+  let isInvisible = false;
+  let mainWindow = createAppWindow(isInvisible);
+
+  // Expose current invisibility state to renderer processes
+  ipcMain.handle('get-invisibility-state', () => isInvisible);
+
+  // Send initial state to the freshly created window once it's ready
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('invisibility-state-changed', isInvisible);
+    }
+  });
   let chatWindow: BrowserWindow | null = null
   const shortcutsHelper = new ShortcutsHelper(mainWindow, () => chatWindow);
+
+  ipcMain.on('toggle-invisibility', () => {
+    isInvisible = !isInvisible;
+
+    // Close existing windows
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close();
+    }
+    if (chatWindow && !chatWindow.isDestroyed()) {
+      chatWindow.close();
+    }
+
+    // Recreate windows with the new setting
+    mainWindow = createAppWindow(isInvisible);
+    shortcutsHelper.updateMainWindow(mainWindow);
+    mainWindow.webContents.on('did-finish-load', () => {
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('invisibility-state-changed', isInvisible);
+      }
+    });
+
+    // Notify all existing windows (if any) about the state change
+    BrowserWindow.getAllWindows().forEach((win) => {
+      if (!win.isDestroyed()) {
+        win.webContents.send('invisibility-state-changed', isInvisible);
+      }
+    });
+
+    // The chat window will be recreated by the state machine if needed
+  });
   ;(global as any).appState = appState;
   shortcutsHelper.registerGlobalShortcuts();
 
@@ -204,7 +245,7 @@ ipcMain.on('open-chat', () => {
     const chatWindowExists = chatWindow && !chatWindow.isDestroyed()
 
     if (shouldChatWindowExist && !chatWindowExists) {
-      chatWindow = createChatWindow()
+      chatWindow = createChatWindow(isInvisible);
 
       // Send the last known input value to the new window
       chatWindow.webContents.on('did-finish-load', () => {

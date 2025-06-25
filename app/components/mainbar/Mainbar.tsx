@@ -1,4 +1,4 @@
-import { Mic, SettingsIcon, Command, CornerDownLeft, Space } from 'lucide-react';
+import { Mic, SettingsIcon, Command, CornerDownLeft, Space, Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { Button } from '../ui/button';
 import { startAudioCapture, stopAudioCapture, AudioCaptureStreams } from '../../lib/audio';
@@ -11,6 +11,15 @@ export enum UIState {
 }
 
 export const Mainbar = () => {
+  const [isInvisible, setIsInvisible] = useState(false);
+
+  // Sync initial and subsequent invisibility state from main process
+  useEffect(() => {
+    const updateState = (state: boolean) => setIsInvisible(state);
+    window.api.invoke('get-invisibility-state').then(updateState).catch(() => {});
+    window.api.receive('invisibility-state-changed', updateState);
+    return () => window.api.removeAllListeners('invisibility-state-changed');
+  }, []);
   const [chatActive, setChatActive] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -137,6 +146,11 @@ export const Mainbar = () => {
     }
   };
 
+  const handleInvisibilityToggle = () => {
+    setIsInvisible((prevState) => !prevState);
+    window.api.send('toggle-invisibility');
+  };
+
   return (
     <div className="w-full h-16 pl-5 pr-5 glass rounded-full font-sans">
       <div className="flex items-center justify-between w-full h-full">
@@ -163,6 +177,13 @@ export const Mainbar = () => {
           <Button variant={isRecording ? 'destructive' : 'ghost'} size="sm" onClick={handleMicClick}>
             <span>{formatTime(recordingTime)}</span>
             <Mic className={isRecording ? 'animate-pulse text-red-500' : ''} />
+          </Button>
+        </div>
+
+        {/* Right - Invisibility Toggle */}
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={handleInvisibilityToggle} title={isInvisible ? 'Enable invisibility' : 'Disable invisibility'}>
+            {isInvisible ? <Eye /> : <EyeOff />}
           </Button>
         </div>
 

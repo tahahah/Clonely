@@ -4,7 +4,7 @@ import { join } from 'path'
 import { registerWindowIPC, registerChatWindowIPC } from '@/lib/window/ipcEvents'
 import appIcon from '@/resources/build/icon.png?asset'
 
-export function createAppWindow(): BrowserWindow {
+export function createAppWindow(isInvisible = false): BrowserWindow {
   const workArea = screen.getPrimaryDisplay().workAreaSize
   const screenWidth = workArea.width
 
@@ -34,14 +34,16 @@ export function createAppWindow(): BrowserWindow {
     backgroundMaterial: 'acrylic'
   })
 
-  // Prevent the window from appearing in most software screen captures (Windows).
-  mainWindow.setContentProtection(true)
-  if (process.platform === 'win32') {
-    void import('@/lib/main/protectWindow')
-      .then(({ applyWindowCaptureProtection }) => {
-        applyWindowCaptureProtection(mainWindow)
-      })
-      .catch(() => {})
+  if (!isInvisible) {
+    // Prevent the window from appearing in most software screen captures (Windows).
+    mainWindow.setContentProtection(true)
+    if (process.platform === 'win32') {
+      void import('@/lib/main/protectWindow')
+        .then(({ applyWindowCaptureProtection }) => {
+          applyWindowCaptureProtection(mainWindow)
+        })
+        .catch(() => {})
+    }
   }
 
   // Register IPC events for the main window.
@@ -66,7 +68,7 @@ export function createAppWindow(): BrowserWindow {
   return mainWindow
 }
 
-export function createChatWindow(): BrowserWindow {
+export function createChatWindow(isInvisible = false): BrowserWindow {
   const workArea = screen.getPrimaryDisplay().workAreaSize
   const screenWidth = workArea.width
   const screenHeight = workArea.height
@@ -96,14 +98,16 @@ export function createChatWindow(): BrowserWindow {
     resizable: false
   })
 
-  // Prevent the window from appearing in most software screen captures (Windows).
-  chatWindow.setContentProtection(true)
-  if (process.platform === 'win32') {
-    void import('@/lib/main/protectWindow')
-      .then(({ applyWindowCaptureProtection }) => {
-        applyWindowCaptureProtection(chatWindow)
-      })
-      .catch(() => {})
+  if (!isInvisible) {
+    // Prevent the window from appearing in most software screen captures (Windows).
+    chatWindow.setContentProtection(true)
+    if (process.platform === 'win32') {
+      void import('@/lib/main/protectWindow')
+        .then(({ applyWindowCaptureProtection }) => {
+          applyWindowCaptureProtection(chatWindow)
+        })
+        .catch(() => {})
+    }
   }
 
   registerChatWindowIPC(chatWindow)

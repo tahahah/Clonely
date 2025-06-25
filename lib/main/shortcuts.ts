@@ -12,6 +12,10 @@ export class ShortcutsHelper {
     private getChatWindow: () => BrowserWindow | null
   ) {}
 
+  public updateMainWindow(win: BrowserWindow): void {
+    this.mainWindow = win;
+  }
+
   public registerGlobalShortcuts(): void {
     // Toggle visibility of windows without touching app state
     globalShortcut.register('CommandOrControl+Space', () => {
