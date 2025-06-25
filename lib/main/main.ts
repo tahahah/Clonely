@@ -59,6 +59,10 @@ app.whenReady().then(() => {
   let chatWindow: BrowserWindow | null = null
   const shortcutsHelper = new ShortcutsHelper(mainWindow, () => chatWindow);
 
+  ipcMain.on('quit-app', () => {
+    app.quit();
+  });
+
   ipcMain.on('toggle-invisibility', () => {
     isInvisible = !isInvisible;
 
