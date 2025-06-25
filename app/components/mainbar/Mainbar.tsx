@@ -20,6 +20,9 @@ export const Mainbar = () => {
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const audioStreamsRef = useRef<AudioCaptureStreams | null>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const frameIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const videoElemRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const handleStateChange = ({ next }: { prev: UIState; next: UIState }) => {
@@ -58,6 +61,15 @@ export const Mainbar = () => {
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
       }
+      if (frameIntervalRef.current) {
+        clearInterval(frameIntervalRef.current);
+      }
+      // cleanup video & canvas
+      if (videoElemRef.current) {
+        videoElemRef.current.srcObject = null;
+        videoElemRef.current = null as any;
+      }
+      canvasRef.current = null;
       setRecordingTime(0);
       setIsRecording(false);
     } else {
@@ -87,6 +99,25 @@ export const Mainbar = () => {
 
         sourceNode.connect(processor);
         processor.connect(ctx.destination); // required in some browsers
+
+        // ---- Screen frame capture setup ----
+        const videoElem = document.createElement('video');
+        videoElem.muted = true;
+        videoElem.srcObject = streams.systemStream;
+        await videoElem.play();
+        videoElemRef.current = videoElem;
+        const canvas = document.createElement('canvas');
+        canvas.width = 1280;
+        canvas.height = 720;
+        canvasRef.current = canvas;
+        const ctx2d = canvas.getContext('2d');
+        frameIntervalRef.current = setInterval(() => {
+          if (!ctx2d || videoElem.readyState < 2) return;
+          ctx2d.drawImage(videoElem, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
+          const base64 = dataUrl.split(',')[1];
+          window.api.send('live-image-chunk', base64);
+        }, 1000);
 
         setIsRecording(true);
         // Notify main to start Gemini session

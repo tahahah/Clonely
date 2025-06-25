@@ -83,6 +83,10 @@ ipcMain.on('open-chat', () => {
     geminiLiveHelper.finishTurn();
   });
 
+  ipcMain.on('live-image-chunk', (_, jpegBase64: string) => {
+    geminiLiveHelper.sendImageChunk(jpegBase64);
+  });
+
   let apiRequestController: AbortController | null = null;
 
   appState.on('stateChange', async ({ prev, next }) => {

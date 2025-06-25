@@ -29,7 +29,7 @@ export async function startAudioCapture(): Promise<AudioCaptureStreams> {
       video: true,
       audio: true,
     });
-    systemStream.getVideoTracks().forEach((track) => track.stop()); // We don't need video
+    // Keep video track for potential screen frames
     const systemSource = audioContext.createMediaStreamSource(systemStream);
 
     // 4. Combine streams

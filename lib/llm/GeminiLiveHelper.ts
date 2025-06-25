@@ -101,6 +101,13 @@ export class GeminiLiveHelper {
     })
   }
 
+  // Stream a JPEG image frame
+  sendImageChunk(base64Jpeg: string): void {
+    if (!this.session) return;
+
+    this.session.sendRealtimeInput({ video: { data: base64Jpeg, mimeType: 'image/jpeg' } });
+  }
+
   // Called when the mic button is toggled OFF
   finishTurn(): void {
     if (!this.session) return
