@@ -90,6 +90,19 @@ ipcMain.on('open-chat', () => {
   let apiRequestController: AbortController | null = null;
 
   appState.on('stateChange', async ({ prev, next }) => {
+    // If a live session is active and user submits text -> send via live session.
+    if (next === UIState.Loading) {
+      if (geminiLiveHelper.canAcceptTextInput()) {
+      if (currentInputValue.trim()) {
+        geminiLiveHelper.sendTextInput(currentInputValue.trim());
+      }
+      // Short-circuit normal loading flow; mark immediate success so UI resets.
+      appState.dispatch('API_SUCCESS');
+      return;
+    } else {
+      // Proceed with normal chat flow (existing logic)
+    }
+    }
     // Reset chat history when returning to idle
     if (next === UIState.ActiveIdle) {
       geminiHelper.resetChat();
@@ -118,7 +131,7 @@ ipcMain.on('open-chat', () => {
       try {
         // --- Capture Phase ---
         const primaryDisplay = screen.getPrimaryDisplay()
-        const sources = await desktopCapturer.getSources({ types: ['screen'] })
+                const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: primaryDisplay.size })
         const primaryScreenSource =
           sources.find((source) => source.display_id === String(primaryDisplay.id)) || sources[0]
 
@@ -140,7 +153,7 @@ ipcMain.on('open-chat', () => {
           if (!signal.aborted) {
             BrowserWindow.getAllWindows().forEach((win) => {
               if (!win.isDestroyed()) {
-                win.webContents.send('api-stream-chunk', chunk)
+                win.webContents.send('api-stream-chunk', { text: chunk })
               }
             })
           }

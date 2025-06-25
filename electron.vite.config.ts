@@ -10,6 +10,7 @@ export default defineConfig({
         input: {
           main: resolve(__dirname, 'lib/main/main.ts'),
         },
+        external: ['@google/generative-ai', 'wavefile'],
       },
     },
     resolve: {
@@ -19,7 +20,7 @@ export default defineConfig({
         '@/resources': resolve(__dirname, 'resources'),
       },
     },
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin({ exclude: ['electron-audio-loopback'] })],
   },
   preload: {
     build: {
@@ -36,7 +37,7 @@ export default defineConfig({
         '@/resources': resolve(__dirname, 'resources'),
       },
     },
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin({ exclude: ['electron-audio-loopback'] })],
   },
   renderer: {
     root: './app',

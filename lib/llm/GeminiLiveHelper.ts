@@ -24,7 +24,17 @@ export class GeminiLiveHelper {
   private closePending = false
   private turnJustCompleted = false
 
+  // Start a new live session. If an old one is still open, close it first so we start fresh.
   async startSession(onMessage: (chunk: ChatChunk) => void): Promise<void> {
+    if (this.session) {
+      try {
+        this.session.close();
+      } catch (err) {
+        // log and continue – session may already be closed.
+        console.warn('[GeminiLive] close previous session err', err);
+      }
+      this.session = null;
+    }
     if (this.session) return // already running
 
     const responseQueue: any[] = []
@@ -99,6 +109,22 @@ export class GeminiLiveHelper {
     this.session.sendRealtimeInput({
       audio: { data: base64Audio, mimeType: 'audio/pcm;rate=16000' }
     })
+  }
+
+  /** Check whether a live session is currently active */
+  isActive(): boolean {
+    return !!this.session;
+  }
+
+  /** Return true if session is active and not pending close */
+  canAcceptTextInput(): boolean {
+    return !!this.session && !this.closePending;
+  }
+
+  /** Send plain text input during a live session */
+  sendTextInput(text: string): void {
+    if (!this.session) return;
+    this.session.sendRealtimeInput({ text });
   }
 
   // Stream a JPEG image frame
