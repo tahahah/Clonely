@@ -16,7 +16,8 @@ A clone of Cluely, because it didn't work on Windows when I tried it. <br/> So I
 </p>
 
 <p align="center">
-    <a href="https://www.loom.com/share/2ad168adb3844543a45437b184bc822b">Watch Video Preview</a>
+    <a href="https://www.loom.com/share/2ad168adb3844543a45437b184bc822b">Watch Demo 1</a> <br>
+    <a href="https://www.loom.com/share/c98eaf60366548bf94cf2312f8ed704d?sid=3d2e2395-08af-4d9b-aa62-cccefd63a3be">Watch Demo 2</a>
 </p>
 
 <br />
