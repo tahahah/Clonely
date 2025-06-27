@@ -67,6 +67,12 @@ npm install
 
 ## Development
 
+Set your Gemini API key in the .env file:
+
+```bash
+VITE_GEMINI_API_KEY=*****
+```
+
 Start the development server:
 
 ```bash
