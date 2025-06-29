@@ -46,6 +46,27 @@ A clone of Cluely, because it didn't work on Windows when I tried it. <br/> So I
 
 <br />
 
+<br />
+
+### Keyboard Shortcuts
+
+| Shortcut                          | Action                                                             |
+|-----------------------------------|--------------------------------------------------------------------|
+| <kbd>Ctrl</kbd>+<kbd>Space</kbd> | Toggle invisibility (show/hide main and chat windows)             |
+| <kbd>Ctrl</kbd>+<kbd>Enter</kbd> | Open chat window / submit input in chat mode                      |
+| <kbd>Esc</kbd>                   | Cancel chat or close windows                                      |
+
+<br />
+
+### Mode Comparison: Chat vs Voice
+
+| Mode  | Input      | Description                                                          |
+|-------|------------|----------------------------------------------------------------------|
+| Chat  | Keyboard   | Type prompts; captures a screenshot and returns LLM response.      |
+| Voice | Microphone | Streams live audio & screenshots; responses appear in real-time.     |
+
+<br />
+
 ## Prerequisites
 
 - Node.js (v18 or higher)
