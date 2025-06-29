@@ -17,55 +17,67 @@ export class ShortcutsHelper {
   }
 
   public registerGlobalShortcuts(): void {
-    // Toggle visibility of windows without touching app state
+    // Ctrl+Space always listens globally
     globalShortcut.register('CommandOrControl+Space', () => {
-      const chatWindow = this.getChatWindow()
+      const chatWindow = this.getChatWindow();
       const anyVisible =
         (this.mainWindow && !this.mainWindow.isDestroyed() && this.mainWindow.isVisible()) ||
-        (chatWindow && !chatWindow.isDestroyed() && chatWindow.isVisible())
+        (chatWindow && !chatWindow.isDestroyed() && chatWindow.isVisible());
 
       if (anyVisible) {
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) this.mainWindow.hide()
-        if (chatWindow && !chatWindow.isDestroyed()) chatWindow.hide()
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) this.mainWindow.hide();
+        if (chatWindow && !chatWindow.isDestroyed()) chatWindow.hide();
+        // Unregister other shortcuts
+        this.unregisterWindowShortcuts();
       } else {
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) this.mainWindow.show()
-        if (chatWindow && !chatWindow.isDestroyed()) chatWindow.show()
-        if (chatWindow && !chatWindow.isDestroyed()) chatWindow.focus()
+        if (this.mainWindow && !this.mainWindow.isDestroyed()) this.mainWindow.show();
+        if (chatWindow && !chatWindow.isDestroyed()) chatWindow.show();
+        if (chatWindow && !chatWindow.isDestroyed()) chatWindow.focus();
+        // Register other shortcuts
+        this.registerWindowShortcuts();
       }
-    })
-
-    // Other shortcuts still drive state machine
-    globalShortcut.register('CommandOrControl+Enter', () => {
-      const chatWindow = this.getChatWindow();
-
-      // If chat window exists but is not focused, just focus it.
-      if (this.mainWindow.isVisible()){
-          if (chatWindow && !chatWindow.isDestroyed() && !chatWindow.isFocused() ) {
-            chatWindow.show(); // .show() brings to front and focuses.
-          } else {
-            // Otherwise, dispatch event based on current state.
-            const currentState = appState.state;
-            if (currentState === UIState.ActiveIdle) {
-              appState.dispatch('OPEN_CHAT');
-            } else if (
-              currentState === UIState.ReadyChat ||
-              currentState === UIState.Error
-            ) {
-              appState.dispatch('SUBMIT');
-            }
-          }
-      }
-
     });
 
-    globalShortcut.register('Escape', () => {
+    // Initially register window-specific shortcuts
+    this.registerWindowShortcuts();
 
-      appState.dispatch('ESC')
-    })
-
-    // Unregister shortcuts when quitting
+    // Unregister all on quit
     app.on('will-quit', () => {
-      globalShortcut.unregisterAll()
-    })
+      globalShortcut.unregisterAll();
+    });
+  }
+
+  // Register shortcuts only when windows are visible
+  private registerWindowShortcuts(): void {
+    // Enter: open or submit in chat
+    globalShortcut.register('CommandOrControl+Enter', () => {
+      const chatWindow = this.getChatWindow();
+      if (this.mainWindow.isVisible()) {
+        if (chatWindow && !chatWindow.isDestroyed() && !chatWindow.isFocused()) {
+          chatWindow.show();
+        } else {
+          const currentState = appState.state;
+          if (currentState === UIState.ActiveIdle) {
+            appState.dispatch('OPEN_CHAT');
+          } else if (
+            currentState === UIState.ReadyChat ||
+            currentState === UIState.Error
+          ) {
+            appState.dispatch('SUBMIT');
+          }
+        }
+      }
+    });
+
+    // Escape: send ESC to state machine
+    globalShortcut.register('Escape', () => {
+      appState.dispatch('ESC');
+    });
+  }
+
+  // Unregister window-specific shortcuts
+  private unregisterWindowShortcuts(): void {
+    globalShortcut.unregister('CommandOrControl+Enter');
+    globalShortcut.unregister('Escape');
   }
 }
