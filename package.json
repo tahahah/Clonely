@@ -36,6 +36,7 @@
     ]
   },
   "dependencies": {
+    "@deepgram/sdk": "^4.7.0",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@google/genai": "^1.6.0",
