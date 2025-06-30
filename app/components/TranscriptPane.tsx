@@ -1,11 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface TranscriptPaneProps {
-  // No props needed for now, as it will listen to IPC events
-}
 
-const TranscriptPane: React.FC<TranscriptPaneProps> = () => {
+
+const TranscriptPane: React.FC = () => {
   const [transcriptLines, setTranscriptLines] = useState<string[]>([]);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
@@ -50,7 +47,7 @@ const TranscriptPane: React.FC<TranscriptPaneProps> = () => {
   }, [transcriptLines]);
 
   return (
-    <div className="flex flex-col h-full p-4 bg-gray-800 text-white rounded-lg shadow-inner overflow-y-auto">
+    <div className="flex flex-col h-full p-4 glass rounded-lg shadow-inner overflow-y-auto">
       <h2 className="text-lg font-semibold mb-2">Live Transcription</h2>
       <div className="flex-grow space-y-1 text-sm">
         {transcriptLines.map((line, index) => (

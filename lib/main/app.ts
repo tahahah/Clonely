@@ -33,6 +33,8 @@ export function createAppWindow(isInvisible = false): BrowserWindow {
     resizable: false,
     backgroundMaterial: 'acrylic'
   })
+  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
 
   if (!isInvisible) {
     // Prevent the window from appearing in most software screen captures (Windows).

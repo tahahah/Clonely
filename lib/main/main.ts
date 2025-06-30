@@ -9,8 +9,8 @@ import { pathToFileURL } from 'url'
 
 
 import { GeminiHelper } from '../llm/GeminiHelper'
-import { GeminiLiveHelper } from '../llm/GeminiLiveHelper'
-import { TranscribeHelper } from '../llm/TranscribeHelper'
+import { LiveAudioService } from '../features/live-audio/LiveAudioService'
+import { windowRegistry } from './windowRegistry'
 
 // Initialize audio capture functionality before the app is ready.
 AudioHelper.initialize();
@@ -47,6 +47,7 @@ app.whenReady().then(() => {
   // Create app window
   let isInvisible = false;
   let mainWindow = createAppWindow(isInvisible);
+  windowRegistry.setMainWindow(mainWindow);
 
   // Expose current invisibility state to renderer processes
   ipcMain.handle('get-invisibility-state', () => isInvisible);
@@ -57,7 +58,8 @@ app.whenReady().then(() => {
       mainWindow.webContents.send('invisibility-state-changed', isInvisible);
     }
   });
-  let chatWindow: BrowserWindow | null = null
+  let chatWindow: BrowserWindow | null = null;
+  windowRegistry.setChatWindow(chatWindow);
   const shortcutsHelper = new ShortcutsHelper(mainWindow, () => chatWindow);
 
   ipcMain.on('quit-app', () => {
@@ -77,6 +79,7 @@ app.whenReady().then(() => {
 
     // Recreate windows with the new setting
     mainWindow = createAppWindow(isInvisible);
+    windowRegistry.setMainWindow(mainWindow);
     shortcutsHelper.updateMainWindow(mainWindow);
     mainWindow.webContents.on('did-finish-load', () => {
       if (!mainWindow.isDestroyed()) {
@@ -110,8 +113,7 @@ ipcMain.on('open-chat', () => {
   });
 
   // ---- Gemini Live Audio IPC wiring ----
-  const geminiLiveHelper = new GeminiLiveHelper();
-  const transcribeHelper = new TranscribeHelper();
+  const liveAudioService = new LiveAudioService();
 
   let isLiveAudioActive = false;
 
@@ -124,19 +126,19 @@ ipcMain.on('open-chat', () => {
 
     try {
       // Start both helpers and wait for their connections to open
-      await Promise.all([
-        geminiLiveHelper.startSession((chunk) => {
+      await liveAudioService.start({
+        onGeminiChunk: (chunk) => {
           if (chunk.text) console.warn('[Gemini]', chunk.text);
           if (chatWindow && !chatWindow.isDestroyed()) {
             chatWindow.webContents.send('gemini-transcript', chunk);
           }
-        }),
-        transcribeHelper.start((transcript) => {
+        },
+        onTranscript: (text) => {
           if (chatWindow && !chatWindow.isDestroyed()) {
-            chatWindow.webContents.send('live-transcript', transcript);
+            chatWindow.webContents.send('live-transcript', text);
           }
-        }),
-      ]);
+        }
+      });
 
       console.warn('Both Gemini and Deepgram connections are open. Ready to send audio.');
       isLiveAudioActive = true;
@@ -158,8 +160,7 @@ ipcMain.on('open-chat', () => {
       return;
     }
     const audioBuffer = Buffer.from(chunk);
-    geminiLiveHelper.sendAudioChunk(audioBuffer);
-    transcribeHelper.sendChunk(audioBuffer);
+    liveAudioService.sendAudioChunk(audioBuffer);
   });
 
   ipcMain.on('live-audio-stop', () => {
@@ -168,17 +169,16 @@ ipcMain.on('open-chat', () => {
       console.warn('Live audio not active, ignoring stop event.');
       return;
     }
-    geminiLiveHelper.finishTurn();
-    transcribeHelper.finish();
+    liveAudioService.stop();
     isLiveAudioActive = false;
   });
 
   ipcMain.on('live-audio-done', () => {
-    geminiLiveHelper.finishTurn();
+    liveAudioService.finishTurn();
   });
 
   ipcMain.on('live-image-chunk', (_, jpegBase64: string) => {
-    geminiLiveHelper.sendImageChunk(jpegBase64);
+    liveAudioService.sendImageChunk(jpegBase64);
   });
 
   let apiRequestController: AbortController | null = null;
@@ -186,9 +186,9 @@ ipcMain.on('open-chat', () => {
   appState.on('stateChange', async ({ prev, next }) => {
     // If a live session is active and user submits text -> send via live session.
     if (next === UIState.Loading) {
-      if (geminiLiveHelper.canAcceptTextInput()) {
+      if (liveAudioService.isActive()) {
       if (currentInputValue.trim()) {
-        geminiLiveHelper.sendTextInput(currentInputValue.trim());
+        liveAudioService.sendTextInput(currentInputValue.trim());
       }
       // Short-circuit normal loading flow; mark immediate success so UI resets.
       appState.dispatch('API_SUCCESS');
@@ -299,6 +299,7 @@ ipcMain.on('open-chat', () => {
 
     if (shouldChatWindowExist && !chatWindowExists) {
       chatWindow = createChatWindow(isInvisible);
+      windowRegistry.setChatWindow(chatWindow);
 
       // Send the last known input value to the new window
       chatWindow.webContents.on('did-finish-load', () => {
@@ -308,7 +309,8 @@ ipcMain.on('open-chat', () => {
       })
 
       chatWindow.on('closed', () => {
-        chatWindow = null
+        chatWindow = null;
+        windowRegistry.setChatWindow(null)
         // If window is closed manually, it's like pressing ESC
         if (appState.state !== UIState.ActiveIdle) {
           appState.dispatch('ESC')
@@ -318,7 +320,8 @@ ipcMain.on('open-chat', () => {
 
       if (chatWindow) {
         chatWindow.destroy()
-        chatWindow = null
+        chatWindow = null;
+        windowRegistry.setChatWindow(null)
         currentInputValue = '';
       }
     }
