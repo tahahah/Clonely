@@ -10,6 +10,7 @@ import { pathToFileURL } from 'url'
 
 import { GeminiHelper } from '../llm/GeminiHelper'
 import { GeminiLiveHelper } from '../llm/GeminiLiveHelper'
+import { TranscribeHelper } from '../llm/TranscribeHelper'
 
 // Initialize audio capture functionality before the app is ready.
 AudioHelper.initialize();
@@ -110,18 +111,66 @@ ipcMain.on('open-chat', () => {
 
   // ---- Gemini Live Audio IPC wiring ----
   const geminiLiveHelper = new GeminiLiveHelper();
+  const transcribeHelper = new TranscribeHelper();
 
-  ipcMain.on('live-audio-start', () => {
-    geminiLiveHelper.startSession((chunk) => {
+  let isLiveAudioActive = false;
+
+  ipcMain.on('live-audio-start', async () => {
+    console.warn('Received live-audio-start event.');
+    if (isLiveAudioActive) {
+      console.warn('Live audio already active, ignoring start event.');
+      return;
+    }
+
+    try {
+      // Start both helpers and wait for their connections to open
+      await Promise.all([
+        geminiLiveHelper.startSession((chunk) => {
+          if (chunk.text) console.warn('[Gemini]', chunk.text);
+          if (chatWindow && !chatWindow.isDestroyed()) {
+            chatWindow.webContents.send('gemini-transcript', chunk);
+          }
+        }),
+        transcribeHelper.start((transcript) => {
+          if (chatWindow && !chatWindow.isDestroyed()) {
+            chatWindow.webContents.send('live-transcript', transcript);
+          }
+        }),
+      ]);
+
+      console.warn('Both Gemini and Deepgram connections are open. Ready to send audio.');
+      isLiveAudioActive = true;
+    } catch (error) {
+      console.error('Failed to start live audio services:', error);
+      // Optionally, send an error back to the renderer
       BrowserWindow.getAllWindows().forEach((win) => {
         if (win.isDestroyed()) return;
-        win.webContents.send('api-stream-chunk', chunk);
+        win.webContents.send('live-audio-error', 'Failed to start audio services.');
       });
-    });
+      isLiveAudioActive = false;
+      return;
+    }
   });
 
   ipcMain.on('live-audio-chunk', (_event, chunk: Uint8Array) => {
-    geminiLiveHelper.sendAudioChunk(chunk);
+    if (!isLiveAudioActive) {
+      console.warn('Live audio not active, dropping audio chunk.');
+      return;
+    }
+    const audioBuffer = Buffer.from(chunk);
+    geminiLiveHelper.sendAudioChunk(audioBuffer);
+    transcribeHelper.sendChunk(audioBuffer);
+  });
+
+  ipcMain.on('live-audio-stop', () => {
+    console.warn('Received live-audio-stop event.');
+    if (!isLiveAudioActive) {
+      console.warn('Live audio not active, ignoring stop event.');
+      return;
+    }
+    geminiLiveHelper.finishTurn();
+    transcribeHelper.finish();
+    isLiveAudioActive = false;
   });
 
   ipcMain.on('live-audio-done', () => {

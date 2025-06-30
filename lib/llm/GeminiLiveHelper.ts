@@ -30,82 +30,97 @@ export class GeminiLiveHelper {
       try {
         this.session.close();
       } catch (err) {
-        // log and continue – session may already be closed.
         console.warn('[GeminiLive] close previous session err', err);
       }
       this.session = null;
     }
-    if (this.session) return // already running
+    // If a session is already running, return early.
+    // This check should be after closing potentially old sessions.
+    if (this.session) return;
 
-    const responseQueue: any[] = []
+    let resolveConnection: () => void;
+    let rejectConnection: (e: any) => void;
+    const connectionPromise = new Promise<void>((resolve, reject) => {
+      resolveConnection = resolve;
+      rejectConnection = reject;
+    });
+
+    const responseQueue: any[] = [];
 
     const waitMessage = async () => {
       while (responseQueue.length === 0) {
-        await new Promise((res) => setTimeout(res, 50))
+        await new Promise((res) => setTimeout(res, 50));
       }
-      return responseQueue.shift()
-    }
+      return responseQueue.shift();
+    };
 
     const handleTurn = async () => {
-      const turns: any[] = []
-      let done = false
+      const turns: any[] = [];
+      let done = false;
       while (!done) {
-        const message = await waitMessage()
-        turns.push(message)
+        const message = await waitMessage();
+        turns.push(message);
         if (message?.serverContent?.turnComplete) {
-          done = true
+          done = true;
         }
       }
-      return turns
-    }
+      return turns;
+    };
 
     this.session = (await genAI.live.connect({
       model: this.modelName,
       callbacks: {
-        onopen: () => console.warn('[GeminiLive] opened'),
+        onopen: () => {
+          console.warn('[GeminiLive] opened');
+          resolveConnection(); // Resolve the promise when connection opens
+        },
         onmessage: (m) => {
-          responseQueue.push(m)
-          const tText = (m as any).text
+          responseQueue.push(m);
+          const tText = (m as any).text;
           if (tText) {
             if (this.turnJustCompleted) {
-              onMessage({ reset: true })
-              this.turnJustCompleted = false
+              onMessage({ reset: true });
+              this.turnJustCompleted = false;
             }
-            onMessage({ text: tText })
+            onMessage({ text: tText });
           }
           if (m?.serverContent?.turnComplete) {
-            this.turnJustCompleted = true
+            this.turnJustCompleted = true;
           }
           if (m?.serverContent?.turnComplete && this.closePending && this.session) {
-            // turn finished and user toggled mic off – close socket
-            this.session.close()
-            this.session = null
-            this.closePending = false
+            this.session.close();
+            this.session = null;
+            this.closePending = false;
           }
         },
-        onerror: (e) => console.error('[GeminiLive] error', e),
-        onclose: (e) => console.warn('[GeminiLive] closed', e.reason)
+        onerror: (e) => {
+          console.error('[GeminiLive] error', e);
+          rejectConnection(e); // Reject the promise on error
+        },
+        onclose: (e) => console.warn('[GeminiLive] closed', e.reason),
       },
-      config: { responseModalities: [Modality.TEXT] }
-    })) as unknown as LiveSession
+      config: { responseModalities: [Modality.TEXT] },
+    })) as unknown as LiveSession;
 
     // detach async listener to forward text
-    ;(async () => {
-      const turns = await handleTurn()
+    (async () => {
+      const turns = await handleTurn();
       for (const t of turns) {
-        const text = (t as any).text
+        const text = (t as any).text;
         if (text) {
-          onMessage({ text })
+          onMessage({ text });
         }
       }
-    })()
+    })();
+
+    return connectionPromise; // Return the promise that resolves on connection open
   }
 
 
   // Stream an audio chunk (called every ~250 ms)
-  sendAudioChunk(chunk: Uint8Array): void {
+  sendAudioChunk(chunk: Buffer): void {
     if (!this.session) return
-    const base64Audio = Buffer.from(chunk).toString('base64')
+    const base64Audio = chunk.toString('base64')
     this.session.sendRealtimeInput({
       audio: { data: base64Audio, mimeType: 'audio/pcm;rate=16000' }
     })
