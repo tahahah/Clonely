@@ -1,110 +1,114 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSelector } from '@xstate/react';
+import { useUIActor } from '../../state/UIStateProvider';
 import { Input } from '../ui/input';
 import { Command, CornerDownLeft } from 'lucide-react';
 import MarkdownRenderer from '../MarkdownRenderer';
 import TranscriptPane from '../TranscriptPane';
 
 
-// Local copy of UIState enum to avoid importing main-process code that relies on Node modules.
-export enum UIState {
-  ActiveIdle = 'ACTIVE_IDLE',
-  ReadyChat = 'READY_CHAT',
-  Loading = 'LOADING',
-  Error = 'ERROR',
-}
-
 interface AIProps {
   isChatPaneVisible: boolean;
 }
 
 export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
-  const [inputValue, setInputValue] = useState('');
-  const [uiState, setUiState] = useState<UIState>(UIState.ReadyChat);
+  const actor = useUIActor();
+  const { send } = actor;
+
+  const { state, isChatIdle, isChatLoading, isChatError } = useSelector(actor, (s) => ({
+    state: s,
+    isChatIdle: s.matches({ chat: 'idle' }),
+    isChatLoading: s.matches({ chat: 'loading' }),
+    isChatError: s.matches({ chat: 'error' }),
+  }));
+
   const [answer, setAnswer] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [inputValue, setInputValue] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Streamed chunk listener (legacy)
   useEffect(() => {
-    const handleStateChange = ({ prev, next }) => {
-      setUiState(next)
+    const handleChunk = (chunk: string) => {
+      setAnswer((prev) => (prev || '') + chunk);
+    };
+    window.api.receive('chat:chunk', handleChunk);
+    return () => {
+      window.api.removeAllListeners('chat:chunk');
+    };
+  }, []);
 
-      if (next === UIState.Loading) {
-        setAnswer('') // Clear previous answer and prepare for stream
-        setErrorMessage(null)
-      }
-
-      if (next === UIState.ActiveIdle) {
-        setInputValue('')
-        setAnswer(null)
-        setErrorMessage(null)
-      }
-
-      // After a stream is complete, clear the user's last input
-      if (prev === UIState.Loading && next === UIState.ReadyChat) {
-        setInputValue('')
-      }
+  useEffect(() => {
+    if (state.matches('activeIdle')) {
+      setAnswer(null);
+      setErrorMessage(null);
+      setInputValue('');
+    } else if (isChatLoading) {
+      setAnswer('');
+      setErrorMessage(null);
     }
+  }, [state, isChatLoading]);
 
-    interface ChatChunk { text?: string; reset?: boolean }
-
-    const handleStreamChunk = (chunk: ChatChunk) => {
+  useEffect(() => {
+    const handleStreamChunk = (chunk: { text?: string; reset?: boolean }) => {
       if (chunk.reset) {
-        setAnswer('')
-        return
+        setAnswer('');
+        return;
       }
       if (chunk.text) {
-        setAnswer((prev) => (prev || '') + chunk.text)
+        setAnswer((prev) => (prev || '') + chunk.text);
       }
-    }
+    };
 
-    const handleApiError = (error: string) => {
-      setErrorMessage(error)
-    }
+    const handleApiError = (error: string) => setErrorMessage(error);
+    const handleSetInitialInput = (value: string) => setInputValue(value);
 
-    const handleSetInitialInput = (value: string) => {
-      setInputValue(value)
-    }
+    // Expose focus and send helpers for global shortcuts
+    (window as any).chatInputAPI = {
+      focus: () => {
+        inputRef.current?.focus();
+      },
+      submit: () => {
+        const val = inputRef.current?.value.trim() || '';
+        if (!isChatLoading && val) {
+          send({ type: 'SUBMIT', value: val });
+          setInputValue('');
+        }
+      }
+    };
 
-    // Listen for state changes from the main process
-    window.api.receive('state-changed', handleStateChange)
     window.api.receive('api-stream-chunk', handleStreamChunk as any);
     window.api.receive('gemini-transcript', handleStreamChunk as any);
-    window.api.receive('api-error', handleApiError)
-    window.api.receive('set-initial-input', handleSetInitialInput)
+    window.api.receive('api-error', handleApiError);
+    window.api.receive('set-initial-input', handleSetInitialInput);
 
-    // Cleanup listener on unmount
     return () => {
-      window.api.removeAllListeners('state-changed')
-      window.api.removeAllListeners('api-stream-chunk')
-      window.api.removeAllListeners('gemini-transcript')
-      window.api.removeAllListeners('api-error')
-      window.api.removeAllListeners('set-initial-input')
-    }
-  }, []) // Empty dependency array ensures this runs only once
+      window.api.removeAllListeners('api-stream-chunk');
+      delete (window as any).chatInputAPI;
+      window.api.removeAllListeners('gemini-transcript');
+      window.api.removeAllListeners('api-error');
+      window.api.removeAllListeners('set-initial-input');
+    };
+  }, [send, isChatLoading]);
 
-  // Effect for focusing input, separated for clarity and correctness
   useEffect(() => {
-    if (isChatPaneVisible && uiState === UIState.ReadyChat) {
-      inputRef.current?.focus()
+    if (isChatPaneVisible && (isChatIdle || isChatError)) {
+      inputRef.current?.focus();
     }
-  }, [uiState, isChatPaneVisible])
+  }, [isChatPaneVisible, isChatIdle, isChatError]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setInputValue(value);
-    window.api.send('input-changed', value);
+    setInputValue(e.target.value);
   };
 
   const renderContent = () => {
-    if (uiState === UIState.Error) {
+    if (isChatError) {
       return (
         <div className="p-4 text-red-500 glass rounded-lg w-full text-center">
           {errorMessage || 'An error occurred.'}
         </div>
-      )
+      );
     }
-
-    const isLoading = uiState === UIState.Loading;
 
     let contentToDisplay;
 
@@ -114,7 +118,7 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
           {errorMessage}
         </div>
       );
-    } else if (isLoading && !answer) {
+    } else if (isChatLoading && !answer) {
       contentToDisplay = (
         <div className="p-4 text-md glass rounded-lg w-full text-left min-h-[56px] max-h-[90%] overflow-y-auto overflow-x-hidden animate-pulse">
           Loading...
@@ -144,14 +148,20 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
               value={inputValue}
               onChange={handleInputChange}
               placeholder={
-                isLoading
+                isChatLoading
                   ? 'Generating answer...'
                   : answer
                   ? 'Ask a follow-up...'
                   : 'Ask me anything...'
               }
               className="glass rounded-full w-full pr-14"
-              disabled={isLoading}
+              disabled={isChatLoading}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !isChatLoading && inputValue.trim()) {
+                  send({ type: 'SUBMIT', value: inputValue });
+                  setInputValue('');
+                }
+              }}
             />
             <div className="absolute right-4 top-1/2 -translate-y-1/2">
               <Command className="size-4" />

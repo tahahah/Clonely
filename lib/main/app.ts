@@ -5,21 +5,23 @@ import { registerWindowIPC } from '@/lib/window/ipcEvents'
 import appIcon from '@/resources/build/icon.png?asset'
 
 export function createAppWindow(isInvisible = false): BrowserWindow {
+  // const isDev = !app.isPackaged && !!process.env.ELECTRON_RENDERER_URL;
+  const isDev = false;
   // Get the primary display's size and use it for the window dimensions.
   const { width, height } = require('electron').screen.getPrimaryDisplay().workAreaSize
   const mainWindow = new BrowserWindow({
     // width: Math.floor(width),
     // height: Math.floor(height),
-    fullscreen: true,
-    skipTaskbar: true,
+    fullscreen: !isDev, // easier dev debugging
+    skipTaskbar: !isDev, // show in taskbar during dev
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       sandbox: false
     },
     show: true,
-    alwaysOnTop: true,
+    alwaysOnTop: !isDev, // avoid hiding behind others in dev
     frame: false,
-    transparent: true,
+    transparent: !isDev,
     // fullscreenable: false,
     hasShadow: false,
     focusable: true,
@@ -28,7 +30,8 @@ export function createAppWindow(isInvisible = false): BrowserWindow {
     title: 'Clonely',
     // maximizable: false,
     resizable: false,
-    backgroundMaterial: 'acrylic'
+    backgroundMaterial: isDev ? undefined : 'acrylic',
+    backgroundColor: isDev ? '#1e1e1e' : undefined
   })
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);

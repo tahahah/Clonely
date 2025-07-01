@@ -43,6 +43,7 @@
     "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.5",
+    "@xstate/react": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^16.5.0",
@@ -62,6 +63,7 @@
     "tw-animate-css": "^1.3.2",
     "unified": "^11.0.5",
     "wavefile": "^11.0.0",
+    "xstate": "^5.20.0",
     "zod": "^3.25.67"
   },
   "devDependencies": {

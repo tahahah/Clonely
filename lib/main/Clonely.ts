@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen, desktopCapturer, protocol } from 'electron'
+import { app, BrowserWindow, protocol } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAppWindow } from './app'
 import { registerIpcHandlers } from './ipc/router'
@@ -161,89 +161,8 @@ export class ClonelyApp {
       // Broadcast the state change to all windows
       windowRegistry.broadcast('state-changed', { prev, next })
 
-      // Handle API requests and window management based on state
-      if (next === UIState.Loading) {
-        this.apiRequestController = new AbortController()
-        await this._handleApiRequest(this.apiRequestController.signal)
-      }
 
-      this._manageChatPaneVisibility(next)
+
     })
-  }
-
-  /**
-   * Handles the logic for making an API request to Gemini, including screen capture.
-   * It captures the primary screen, sends it along with the user's input to the Gemini API,
-   * and streams the response back to the UI.
-   * @param signal - An AbortSignal to cancel the request if the state changes.
-   */
-  private async _handleApiRequest(signal: AbortSignal): Promise<void> {
-    try {
-      // --- Capture Phase ---
-      const primaryDisplay = screen.getPrimaryDisplay()
-      const sources = await desktopCapturer.getSources({
-        types: ['screen'],
-        thumbnailSize: primaryDisplay.size
-      })
-      const primaryScreenSource =
-        sources.find((source) => source.display_id === String(primaryDisplay.id)) || sources[0]
-
-      if (!primaryScreenSource) {
-        throw new Error('Could not find primary screen source for screenshot.')
-      }
-
-      const screenshotPng = primaryScreenSource.thumbnail.toPNG()
-
-      if (!screenshotPng || screenshotPng.length === 0) {
-        throw new Error('Failed to capture screenshot.')
-      }
-
-      const screenshotBase64 = screenshotPng.toString('base64')
-
-      // --- API Call Phase ---
-      const onChunk = (chunk: string): void => {
-        if (!signal.aborted) {
-          windowRegistry.broadcast('api-stream-chunk', { text: chunk })
-        }
-      }
-
-      await this.geminiHelper.sendMessageStream(this.currentInputValue, onChunk, signal, screenshotBase64)
-
-      if (!signal.aborted) {
-        appState.dispatch('API_SUCCESS')
-      }
-    } catch (error) {
-      if (signal.aborted) {
-        console.error('[API] Request was aborted by state change.')
-      } else {
-        console.error('[API] Request failed:', error)
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
-        windowRegistry.broadcast('api-error', errorMessage)
-        appState.dispatch('API_ERROR')
-      }
-    } finally {
-      if (this.apiRequestController?.signal === signal) {
-        this.apiRequestController = null
-      }
-    }
-  }
-
-  /**
-   * Manages the lifecycle of the chat window based on the application state.
-   * It creates the window when needed (e.g., for chat or loading states) and
-   * destroys it when it's no longer required.
-   * @param state - The current UIState which determines if the window should exist.
-   */
-  private _manageChatPaneVisibility(state: UIState): void {
-    const shouldChatPaneBeVisible = [UIState.ReadyChat, UIState.Loading, UIState.Error].includes(
-      state
-    )
-
-    windowRegistry.broadcast('ui:set-chat-pane-visibility', shouldChatPaneBeVisible)
-
-    // When chat pane is hidden, clear the input value
-    if (!shouldChatPaneBeVisible) {
-      this.currentInputValue = ''
-    }
   }
 }

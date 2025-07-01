@@ -156,4 +156,17 @@ export class GeminiLiveHelper {
     this.session.sendRealtimeInput({ audioStreamEnd: true })
     this.closePending = true
   }
+
+  endSession(): void {
+    if (this.session) {
+      try {
+        this.session.close();
+      } catch (err) {
+        console.warn('[GeminiLive] error closing session:', err);
+      }
+      this.session = null;
+    }
+    this.closePending = false;
+    this.turnJustCompleted = false;
+  }
 }

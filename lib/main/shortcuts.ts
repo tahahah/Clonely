@@ -1,5 +1,4 @@
 import { globalShortcut, app, BrowserWindow } from 'electron'
-import { appState, UIState } from '../state/AppStateMachine'
 
 /**
  * Handles registration of global keyboard shortcuts.
@@ -47,17 +46,15 @@ export class ShortcutsHelper {
   private registerWindowShortcuts(): void {
     // Enter: open or submit in chat
     globalShortcut.register('CommandOrControl+Enter', () => {
-      const currentState = appState.state;
-      if (currentState === UIState.ActiveIdle) {
-        appState.dispatch('OPEN_CHAT');
-      } else if (currentState === UIState.ReadyChat || currentState === UIState.Error) {
-        appState.dispatch('SUBMIT');
+      this.mainWindow?.webContents.send('shortcut:ctrl-enter');
+      if (this.mainWindow?.isVisible()) {
+        this.mainWindow?.focus()
       }
     });
 
     // Escape: send ESC to state machine
     globalShortcut.register('Escape', () => {
-      appState.dispatch('ESC');
+      this.mainWindow?.webContents.send('shortcut:esc');
     });
   }
 

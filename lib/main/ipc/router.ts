@@ -1,4 +1,6 @@
-import { BrowserWindow, ipcMain } from 'electron'
+import { BrowserWindow, ipcMain, screen, desktopCapturer } from 'electron'
+
+import { GeminiHelper } from '../../llm/GeminiHelper';
 import { appState } from '@/lib/state/AppStateMachine'
 import { LiveAudioService } from '@/lib/features/live-audio/LiveAudioService'
 import { ShortcutsHelper } from '@/lib/main/shortcuts'
@@ -47,6 +49,58 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     setCurrentInputValue(value);
   });
 
+  const geminiHelper = new GeminiHelper();
+  let apiRequestController: AbortController | null = null;
+
+  ipcMain.on('chat:submit', async (_evt, input: string) => {
+    console.log('chat:submit received', input);
+    setCurrentInputValue(input);
+    apiRequestController = new AbortController();
+    try {
+      // 1. Capture the primary screen
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: primaryDisplay.size,
+      });
+      const primaryScreenSource = sources.find(
+        (source) => source.display_id === String(primaryDisplay.id)
+      ) || sources[0];
+
+      if (!primaryScreenSource) {
+        throw new Error('Could not find primary screen source for screenshot.');
+      }
+
+      const screenshotPng = primaryScreenSource.thumbnail.toPNG();
+
+      if (!screenshotPng || screenshotPng.length === 0) {
+        throw new Error('Failed to capture screenshot.');
+      }
+
+      const screenshotBase64 = screenshotPng.toString('base64');
+      let isFirstChunk = true;
+      await geminiHelper.sendMessageStream(
+        input,
+        (chunk) => {
+          if (isFirstChunk) {
+            broadcast('api-success');
+            isFirstChunk = false;
+          }
+          broadcast('chat:chunk', chunk);
+        },
+        apiRequestController.signal,
+        screenshotBase64
+      );
+    } catch (error) {
+      console.error('Gemini API error:', error);
+      broadcast('api-error', String(error));
+    }
+  });
+
+  ipcMain.on('chat:cancel', () => {
+    appState.dispatch('ESC');
+  });
+
   ipcMain.on('open-chat', () => {
     appState.dispatch('OPEN_CHAT');
   });
@@ -89,6 +143,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
           broadcast('live-transcript', text);
         }
       });
+      broadcast('live-audio-ready');
     } catch (err) {
       console.error('[IPC] Failed to start live audio', err);
       broadcast('live-audio-error', 'Failed to start audio services.');

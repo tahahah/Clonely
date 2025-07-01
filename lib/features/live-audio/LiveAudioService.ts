@@ -1,4 +1,3 @@
-import { BrowserWindow } from 'electron'
 import { GeminiLiveHelper } from '@/lib/llm/GeminiLiveHelper'
 import { TranscribeHelper } from '@/lib/llm/TranscribeHelper'
 
@@ -51,7 +50,7 @@ export class LiveAudioService {
   /** Gracefully end both streams and reset */
   stop(): void {
     if (!this.active) return
-    this.gemini.finishTurn()
+    this.gemini.endSession()
     this.transcribe.finish()
     this.active = false
   }
