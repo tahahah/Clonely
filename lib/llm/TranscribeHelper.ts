@@ -51,7 +51,7 @@ export class TranscribeHelper {
         });
 
         this.connection.on(LiveTranscriptionEvents.Transcript, (data) => {
-          const transcript = data.channel.alternatives[0]?.transcript;
+          const transcript: string = data.channel.alternatives[0]?.transcript;
           if (transcript) {
             console.warn('Deepgram Transcript:', transcript);
             onTranscript(transcript);

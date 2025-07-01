@@ -6,46 +6,31 @@ import { BrowserWindow } from 'electron'
  * messages without maintaining their own copies.
  */
 class WindowRegistry {
+  private static instance: WindowRegistry
   private _mainWindow: BrowserWindow | null = null
-  private _chatWindow: BrowserWindow | null = null
 
-  get mainWindow(): BrowserWindow | null {
-    return this._mainWindow && !this._mainWindow.isDestroyed()
-      ? this._mainWindow
-      : null
-  }
+  private constructor() {}
 
-  get chatWindow(): BrowserWindow | null {
-    return this._chatWindow && !this._chatWindow.isDestroyed()
-      ? this._chatWindow
-      : null
-  }
-
-  setMainWindow(win: BrowserWindow | null) {
-    if (win && win.isDestroyed()) {
-      this._mainWindow = null
-    } else {
-      this._mainWindow = win
+  public static getInstance(): WindowRegistry {
+    if (!WindowRegistry.instance) {
+      WindowRegistry.instance = new WindowRegistry()
     }
+    return WindowRegistry.instance
   }
 
-  setChatWindow(win: BrowserWindow | null) {
-    if (win && win.isDestroyed()) {
-      this._chatWindow = null
-    } else {
-      this._chatWindow = win
-    }
+  public setMainWindow(win: BrowserWindow): void {
+    this._mainWindow = win
   }
 
-  /** Broadcast helper */
-  broadcast(channel: string, ...args: any[]) {
-    if (this.mainWindow) {
-      this.mainWindow.webContents.send(channel, ...args)
-    }
-    if (this.chatWindow) {
-      this.chatWindow.webContents.send(channel, ...args)
+  public getMainWindow(): BrowserWindow | null {
+    return this._mainWindow
+  }
+
+  public broadcast(channel: string, ...args: any[]): void {
+    if (this._mainWindow && !this._mainWindow.isDestroyed()) {
+      this._mainWindow.webContents.send(channel, ...args)
     }
   }
 }
 
-export const windowRegistry = new WindowRegistry()
+export const windowRegistry = WindowRegistry.getInstance()

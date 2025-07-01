@@ -1,35 +1,32 @@
-import { BrowserWindow, shell, app, screen } from 'electron'
+import { BrowserWindow, shell, app } from 'electron'
 
 import { join } from 'path'
-import { registerWindowIPC, registerChatWindowIPC } from '@/lib/window/ipcEvents'
+import { registerWindowIPC } from '@/lib/window/ipcEvents'
 import appIcon from '@/resources/build/icon.png?asset'
 
 export function createAppWindow(isInvisible = false): BrowserWindow {
-  const workArea = screen.getPrimaryDisplay().workAreaSize
-  const screenWidth = workArea.width
-
-  // Create the main window.
+  // Get the primary display's size and use it for the window dimensions.
+  const { width, height } = require('electron').screen.getPrimaryDisplay().workAreaSize
   const mainWindow = new BrowserWindow({
-    width: 600,
-    height: 50,
-    x: Math.floor(screenWidth / 2) - 300,
-    y: 10,
+    // width: Math.floor(width),
+    // height: Math.floor(height),
+    fullscreen: true,
     skipTaskbar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       sandbox: false
     },
-    show: false,
+    show: true,
     alwaysOnTop: true,
     frame: false,
     transparent: true,
-    fullscreenable: false,
+    // fullscreenable: false,
     hasShadow: false,
     focusable: true,
     icon: appIcon,
     titleBarStyle: 'hiddenInset',
-    title: 'CluelyHireMe',
-    maximizable: false,
+    title: 'Clonely',
+    // maximizable: false,
     resizable: false,
     backgroundMaterial: 'acrylic'
   })
@@ -68,67 +65,4 @@ export function createAppWindow(isInvisible = false): BrowserWindow {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
   return mainWindow
-}
-
-export function createChatWindow(isInvisible = false): BrowserWindow {
-  const workArea = screen.getPrimaryDisplay().workAreaSize
-  const screenWidth = workArea.width
-  const screenHeight = workArea.height
-
-  // Create the main window.
-  const chatWindow = new BrowserWindow({
-    width: 600,
-    height: Math.floor(screenHeight / 2),
-    x: Math.floor(screenWidth / 2) - 300,
-    y: 60,
-    skipTaskbar: true,
-    webPreferences: {
-      preload: join(__dirname, '../preload/preload.js'),
-      sandbox: false
-    },
-    show: false,
-    alwaysOnTop: true,
-    frame: false,
-    transparent: true,
-    fullscreenable: false,
-    hasShadow: false,
-    focusable: true,
-    icon: appIcon,
-    titleBarStyle: 'hiddenInset',
-    title: 'Chat',
-    maximizable: false,
-    resizable: false
-  })
-
-  if (!isInvisible) {
-    // Prevent the window from appearing in most software screen captures (Windows).
-    chatWindow.setContentProtection(true)
-    if (process.platform === 'win32') {
-      void import('@/lib/main/protectWindow')
-        .then(({ applyWindowCaptureProtection }) => {
-          applyWindowCaptureProtection(chatWindow)
-        })
-        .catch(() => {})
-    }
-  }
-
-  registerChatWindowIPC(chatWindow)
-
-  chatWindow.on('ready-to-show', () => {
-    chatWindow.show()
-  })
-
-  chatWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
-
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
-  if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
-    chatWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/ai.html`)
-  } else {
-    chatWindow.loadFile(join(__dirname, '../renderer/ai.html'))
-  }
-  return chatWindow
 }

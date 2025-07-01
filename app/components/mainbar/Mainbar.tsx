@@ -153,7 +153,7 @@ export const Mainbar = () => {
   };
 
   return (
-    <div className="w-full h-16 pl-5 pr-5 glass rounded-full font-sans">
+    <div className="pl-5 pr-5 glass rounded-full font-sans flex-none w-[33.333vw] h-[5.5vh] max-w-[33.333vw] max-h-[5.5vh]">
       <div className="flex items-center justify-between w-full h-full">
         {/* Left - Chat button */}
         <div className="flex items-center gap-2">

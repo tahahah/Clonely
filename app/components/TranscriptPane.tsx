@@ -11,22 +11,9 @@ const TranscriptPane: React.FC = () => {
     if (window.api && typeof window.api.receive === 'function') {
       console.warn('TranscriptPane: Setting up IPC listener for live-transcript');
 
-      const handleLiveTranscript = (transcript: string) => {
-        console.warn('TranscriptPane: Received transcript chunk:', transcript);
-        setTranscriptLines((prevLines) => {
-          // Deepgram sends interim results, so we'll update the last line
-          // if it's an interim result, otherwise add a new line.
-          // A simple heuristic for now: if the new transcript is a continuation
-          // of the last line and the last line wasn't final, update it.
-          // For more robust handling, Deepgram's final/is_final flag should be used.
-          if (prevLines.length > 0 && !transcript.endsWith('.')) { // Simple check for interim
-            const newLines = [...prevLines];
-            newLines[newLines.length - 1] = transcript;
-            return newLines;
-          } else {
-            return [...prevLines, transcript];
-          }
-        });
+      const handleLiveTranscript = (chunk: string) => {
+        console.warn('TranscriptPane: Received transcript chunk:', chunk);
+        setTranscriptLines((prevLines) => [...prevLines, chunk]);
       };
 
       window.api.receive('live-transcript', handleLiveTranscript);
@@ -37,6 +24,8 @@ const TranscriptPane: React.FC = () => {
         window.api.removeAllListeners('live-transcript');
       };
     } else {
+      // If window.api is not available, return nothing (undefined) for cleanup.
+      return undefined;
       console.error('TranscriptPane: window.api.receive is not available. IPC communication will not work.');
     }
   }, []);
@@ -49,11 +38,11 @@ const TranscriptPane: React.FC = () => {
   return (
     <div className="flex flex-col h-full p-4 glass rounded-lg shadow-inner overflow-y-auto">
       <h2 className="text-lg font-semibold mb-2">Live Transcription</h2>
-      <div className="flex-grow space-y-1 text-sm">
+      <div className="space-y-1 text-sm h-full content-end">
+        <div ref={transcriptEndRef} />
         {transcriptLines.map((line, index) => (
           <p key={index}>{line}</p>
         ))}
-        <div ref={transcriptEndRef} />
       </div>
     </div>
   );

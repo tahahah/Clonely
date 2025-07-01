@@ -13,7 +13,11 @@ export enum UIState {
   Error = 'ERROR',
 }
 
-export const AI = () => {
+interface AIProps {
+  isChatPaneVisible: boolean;
+}
+
+export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
   const [inputValue, setInputValue] = useState('');
   const [uiState, setUiState] = useState<UIState>(UIState.ReadyChat);
   const [answer, setAnswer] = useState<string | null>(null);
@@ -80,10 +84,10 @@ export const AI = () => {
 
   // Effect for focusing input, separated for clarity and correctness
   useEffect(() => {
-    if (uiState === UIState.ReadyChat) {
+    if (isChatPaneVisible && uiState === UIState.ReadyChat) {
       inputRef.current?.focus()
     }
-  }, [uiState])
+  }, [uiState, isChatPaneVisible])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -127,7 +131,7 @@ export const AI = () => {
     return (
       <div className="flex w-full h-full gap-2">
         {/* Left Column for TranscriptPane */}
-        <div className="w-1/3 h-full">
+        <div className="w-1/3 h-full min-h-0">
           <TranscriptPane />
         </div>
 
@@ -146,10 +150,10 @@ export const AI = () => {
                   ? 'Ask a follow-up...'
                   : 'Ask me anything...'
               }
-              className="glass m-1 rounded-full w-full pr-16"
+              className="glass rounded-full w-full pr-14"
               disabled={isLoading}
             />
-            <div className="absolute inset-y-0 right-4 flex items-center gap-1 pointer-events-none text-muted-foreground">
+            <div className="absolute right-4 top-1/2 -translate-y-1/2">
               <Command className="size-4" />
               <CornerDownLeft className="size-4" />
             </div>
