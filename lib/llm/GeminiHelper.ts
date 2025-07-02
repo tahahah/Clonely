@@ -1,5 +1,7 @@
 import { GoogleGenerativeAI, ChatSession, GenerativeModel, FunctionCallingMode } from '@google/generative-ai'
 
+import { GEMINI_SYSTEM_PROMPT } from './systemPrompt'
+
 const GEMINI_API_KEY =
   process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY
 
@@ -27,7 +29,8 @@ export class GeminiHelper {
         functionCallingConfig: {
           mode: FunctionCallingMode.NONE
         }
-      }
+      },
+      systemInstruction: GEMINI_SYSTEM_PROMPT
     })
   }
 

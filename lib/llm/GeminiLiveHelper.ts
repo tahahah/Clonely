@@ -1,5 +1,7 @@
 import { GoogleGenAI, Modality } from '@google/genai'
 
+import { GEMINI_SYSTEM_PROMPT } from './systemPrompt'
+
 const GEMINI_API_KEY =
   process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY
 
@@ -99,7 +101,7 @@ export class GeminiLiveHelper {
         },
         onclose: (e) => console.warn('[GeminiLive] closed', e.reason),
       },
-      config: { responseModalities: [Modality.TEXT] },
+      config: { responseModalities: [Modality.TEXT], systemInstruction: GEMINI_SYSTEM_PROMPT },
     })) as unknown as LiveSession;
 
     // detach async listener to forward text

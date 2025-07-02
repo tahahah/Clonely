@@ -85,6 +85,7 @@ export const Mainbar = () => {
       frameHandleRef.current.stop();
       frameHandleRef.current = null;
     }
+    
     setRecordingTime(0);
   };
 
@@ -122,11 +123,6 @@ export const Mainbar = () => {
         // Tell the UI state machine to transition to live mode
         send({ type: 'MIC_START' });
 
-        // Reset and start local timer for UI display
-        setRecordingTime(0);
-        recordingIntervalRef.current = setInterval(() => {
-          setRecordingTime((prev) => prev + 1);
-        }, 1000);
       } catch (_error) {
         console.error('[live] failed to start streaming', _error);
       }
