@@ -78,7 +78,7 @@ export const Mainbar = () => {
   };
 
   const handleMicClick = async () => {
-    console.log("isRecording: "+isRecording)
+    console.warn("isRecording: "+isRecording)
     if (isRecording) {
       // ======== Stop Recording ========
       // Notify backend we've finished the current turn
@@ -131,6 +131,10 @@ export const Mainbar = () => {
         processorRef.current = processor;
 
         processor.onaudioprocess = (e) => {
+          if (!uiActor.getSnapshot().matches({ live: 'streaming' })) {
+            console.warn("Audio chunk not sent: live mode inactive");
+            return;
+          }
           const input = e.inputBuffer.getChannelData(0);
           // Convert Float32 [-1,1] to 16-bit PCM little-endian
           const pcm = new Int16Array(input.length);
@@ -139,6 +143,7 @@ export const Mainbar = () => {
             pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
           }
           window.api.send('live-audio-chunk', new Uint8Array(pcm.buffer));
+          console.warn("Audio chunk sent");
         };
 
         sourceNode.connect(processor);
@@ -157,11 +162,16 @@ export const Mainbar = () => {
         canvasRef.current = canvas;
         const ctx2d = canvas.getContext('2d');
         frameIntervalRef.current = setInterval(() => {
+          if (!uiActor.getSnapshot().matches({ live: 'streaming' })) {
+            console.warn("Image chunk not sent: live mode inactive");
+            return;
+          }
           if (!ctx2d || videoElem.readyState < 2) return;
           ctx2d.drawImage(videoElem, 0, 0, canvas.width, canvas.height);
           const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
           const base64 = dataUrl.split(',')[1];
           window.api.send('live-image-chunk', base64);
+          console.warn("Image chunk sent");
         }, 1000);
 
         // Tell the UI state machine to transition to live mode

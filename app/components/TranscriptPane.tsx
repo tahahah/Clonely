@@ -1,14 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSelector } from '@xstate/react';
+import { useUIActor } from '../state/UIStateProvider';
 
 
 
 const TranscriptPane: React.FC = () => {
+  const actor = useUIActor();
+  const { isLiveActive } = useSelector(actor, (s) => ({
+    isLiveActive: s.matches('live'),
+  }));
   const [transcriptLines, setTranscriptLines] = useState<string[]>([]);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Ensure window.api is available
-    if (window.api && typeof window.api.receive === 'function') {
+    if (isLiveActive && window.api && typeof window.api.receive === 'function') {
       console.warn('TranscriptPane: Setting up IPC listener for live-transcript');
 
       const handleLiveTranscript = (chunk: string) => {
@@ -23,12 +28,13 @@ const TranscriptPane: React.FC = () => {
         console.warn('TranscriptPane: Cleaning up IPC listener for live-transcript');
         window.api.removeAllListeners('live-transcript');
       };
-    } else {
-      // If window.api is not available, return nothing (undefined) for cleanup.
-      return undefined;
-      console.error('TranscriptPane: window.api.receive is not available. IPC communication will not work.');
+    } else if (!isLiveActive) {
+      // If live mode is deactivated, clear existing transcripts
+      setTranscriptLines([]);
+      return undefined; // Explicitly return undefined
     }
-  }, []);
+    return undefined; // Default return for paths that don't return a cleanup function
+  }, [isLiveActive]);
 
   useEffect(() => {
     // Scroll to bottom when transcript updates

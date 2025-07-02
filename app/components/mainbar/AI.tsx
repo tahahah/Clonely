@@ -20,7 +20,7 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
     isChatIdle: s.matches({ chat: 'idle' }),
     isChatLoading: s.matches({ chat: 'loading' }),
     isChatError: s.matches({ chat: 'error' }),
-    isLiveActive: s.matches({ live: 'active' }),
+    isLiveActive: s.matches('live'),
   }));
 
   const [answer, setAnswer] = useState<string | null>(null);
@@ -159,12 +159,6 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
               }
               className="glass rounded-full w-full pr-14"
               disabled={isChatLoading}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !isChatLoading && inputValue.trim()) {
-                  send({ type: 'SUBMIT', value: inputValue });
-                  setInputValue('');
-                }
-              }}
             />
             <div className="absolute right-4 top-1/2 -translate-y-1/2">
               <div className="flex gap-2 pt-2">

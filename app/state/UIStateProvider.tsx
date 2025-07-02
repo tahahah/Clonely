@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { useSelector } from '@xstate/react';
 import { createActor } from 'xstate';
 import { uiMachine } from '@/lib/state/uiMachine';
@@ -12,7 +12,7 @@ const UIActorContext = createContext<typeof uiActor | null>(
 );
 
 export const UIStateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  React.useEffect(() => {
+  useEffect(() => {
     // ===== State transition logging =====
     const unsub = uiActor.subscribe((snap) => {
       // eslint-disable-next-line no-console
@@ -58,7 +58,7 @@ export const UIStateProvider: React.FC<{ children: React.ReactNode }> = ({ child
         (window as any).chatInputAPI?.submit?.();
       };
 
-      // If chat pane already open (machine in any chat.* state)
+      // // If chat pane already open (machine in any chat.* state)
       if (snap.matches('chat')) {
         if (!document.hasFocus()) {
           // Window visible but not focused → focus input (window will receive focus automatically by the OS)
