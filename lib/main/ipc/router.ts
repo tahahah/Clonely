@@ -53,7 +53,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
   let apiRequestController: AbortController | null = null;
 
   ipcMain.on('chat:submit', async (_evt, input: string) => {
-    console.log('chat:submit received', input);
+    console.warn('chat:submit received', input);
     setCurrentInputValue(input);
     apiRequestController = new AbortController();
     try {

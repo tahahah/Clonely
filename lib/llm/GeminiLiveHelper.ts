@@ -83,8 +83,9 @@ export class GeminiLiveHelper {
             if (this.turnJustCompleted) {
               onMessage({ reset: true });
               this.turnJustCompleted = false;
+            } else {
+              onMessage({ text: tText });
             }
-            onMessage({ text: tText });
           }
           if (m?.serverContent?.turnComplete) {
             this.turnJustCompleted = true;

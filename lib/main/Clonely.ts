@@ -1,9 +1,10 @@
-import { app, BrowserWindow, protocol } from 'electron'
+import { app, BrowserWindow, protocol, ipcMain } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAppWindow } from './app'
 import { registerIpcHandlers } from './ipc/router'
 import { UIState, appState } from '../state/AppStateMachine'
 import { GeminiHelper } from '../llm/GeminiHelper'
+import { GroqHelper } from '../llm/GroqHelper'
 import { LiveAudioService } from '../features/live-audio/LiveAudioService'
 import { ShortcutsHelper } from './shortcuts'
 import { windowRegistry } from './windowRegistry'
@@ -39,6 +40,7 @@ export class ClonelyApp {
   private liveAudioService: LiveAudioService
   private shortcutsHelper!: ShortcutsHelper
   private geminiHelper: GeminiHelper
+  private groqHelper: GroqHelper
 
   // =========================================================================================
   // Lifecycle
@@ -51,6 +53,7 @@ export class ClonelyApp {
 
     this.liveAudioService = new LiveAudioService()
     this.geminiHelper = new GeminiHelper()
+    this.groqHelper = new GroqHelper()
     this._attachAppEvents()
     app.disableHardwareAcceleration()
   }
@@ -128,6 +131,11 @@ export class ClonelyApp {
         this.currentInputValue = val
       }
     })
+
+    ipcMain.handle('streamGroqQuestions', async (_event, prevQuestions: string[], currentTranscript: string) => {
+      const result = await this.groqHelper.streamQuestions(prevQuestions, currentTranscript, () => {});
+      return result.actions;
+    });
   }
 
   /**

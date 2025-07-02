@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSelector } from '@xstate/react';
 import { useUIActor } from '../state/UIStateProvider';
 
-
+import MarkdownRenderer from './MarkdownRenderer';
 
 const TranscriptPane: React.FC = () => {
   const actor = useUIActor();
@@ -10,15 +10,29 @@ const TranscriptPane: React.FC = () => {
     isLiveActive: s.matches('live'),
   }));
   const [transcriptLines, setTranscriptLines] = useState<string[]>([]);
+  const [actions, setActions] = useState<string[]>([]);
+
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isLiveActive && window.api && typeof window.api.receive === 'function') {
       console.warn('TranscriptPane: Setting up IPC listener for live-transcript');
 
-      const handleLiveTranscript = (chunk: string) => {
-        console.warn('TranscriptPane: Received transcript chunk:', chunk);
-        setTranscriptLines((prevLines) => [...prevLines, chunk]);
+      const handleLiveTranscript = (data: string) => {
+        console.warn('TranscriptPane: Received transcript chunk:', data);
+        setTranscriptLines((prevLines) => [...prevLines, data].slice(-1000)); // Keep last 1000 lines
+
+        // Debounce action generation to avoid excessive API calls
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(async () => {
+          try {
+            const validatedActions = await window.api.invoke('streamGroqQuestions', actions, [...transcriptLines, data].join('\n'));
+            setActions(validatedActions);
+          } catch (err) {
+            console.error('GroqHelper error:', err);
+          }
+        }, 1500);
       };
 
       window.api.receive('live-transcript', handleLiveTranscript);
@@ -34,7 +48,7 @@ const TranscriptPane: React.FC = () => {
       return undefined; // Explicitly return undefined
     }
     return undefined; // Default return for paths that don't return a cleanup function
-  }, [isLiveActive]);
+  }, [isLiveActive, transcriptLines, actions]);
 
   useEffect(() => {
     // Scroll to bottom when transcript updates
@@ -52,6 +66,15 @@ const TranscriptPane: React.FC = () => {
           <p key={index}>{line}</p>
         ))}
       </div>
+      <hr className="my-3" />
+      <h2 className="text-lg font-semibold mb-2">Actions</h2>
+      <ul className="list-disc list-inside space-y-1 text-sm">
+        {actions.map((act, idx) => (
+          <li key={idx} className="break-words">
+            <MarkdownRenderer content={act} />
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };

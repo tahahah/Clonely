@@ -49,6 +49,7 @@
     "dotenv": "^16.5.0",
     "electron-audio-loopback": "^1.0.3",
     "electron-squirrel-startup": "^1.0.1",
+    "groq-sdk": "^0.26.0",
     "katex": "^0.16.22",
     "lucide-react": "^0.511.0",
     "node-addon-api": "^8.4.0",
