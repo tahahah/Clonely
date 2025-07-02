@@ -127,7 +127,7 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
       ); // Placeholder for loading animation
     } else if (answer) {
       contentToDisplay = (
-        <div className="p-4 text-md glass rounded-lg w-full text-left min-h-[56px] max-h-[90%] overflow-y-auto overflow-x-hidden">
+        <div className="p-4 text-md glass rounded-lg w-full text-left flex-grow min-h-0 overflow-y-auto break-words">
           <MarkdownRenderer content={answer || ''} />
         </div>
       );

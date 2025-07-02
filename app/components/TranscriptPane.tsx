@@ -38,7 +38,9 @@ const TranscriptPane: React.FC = () => {
 
   useEffect(() => {
     // Scroll to bottom when transcript updates
-    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (transcriptEndRef.current) {
+      transcriptEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
   }, [transcriptLines]);
 
   return (
