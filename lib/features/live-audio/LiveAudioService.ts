@@ -24,46 +24,66 @@ export class LiveAudioService {
    * Connect to both Gemini and Deepgram. Resolves once BOTH are ready to receive data.
    */
   async start(callbacks: LiveAudioCallbacks): Promise<void> {
-    if (this.active) return
+    // Prevent duplicate or concurrent start attempts
+    if (this.active) {
+      console.warn('LiveAudioService already active, ignoring start()');
+      return;
+    }
 
-    const { onGeminiChunk, onTranscript } = callbacks
+    // Optimistically mark active to block re-entry while we connect
+    this.active = true;
 
-    await Promise.all([
-      this.gemini.startSession((chunk) => {
-        onGeminiChunk?.(chunk)
-      }),
-      this.transcribe.start((text) => {
-        onTranscript?.(text)
-      })
-    ])
+    const { onGeminiChunk, onTranscript } = callbacks;
 
-    this.active = true
+    try {
+      await Promise.all([
+        this.gemini.startSession((chunk) => {
+          onGeminiChunk?.(chunk);
+        }),
+        this.transcribe.start((text) => {
+          onTranscript?.(text);
+        }),
+      ]);
+    } catch (err) {
+      // Roll back active flag if we fail to connect
+      this.active = false;
+      throw err;
+    }
   }
 
   /** Forward a PCM 16k mono chunk to both services */
   sendAudioChunk(chunk: Buffer): void {
-    if (!this.active) return
+    if (!this.active) {
+      return;
+    }
     this.gemini.sendAudioChunk(chunk)
     this.transcribe.sendChunk(chunk)
   }
 
   /** Gracefully end both streams and reset */
   stop(): void {
-    if (!this.active) return
+    if (!this.active) {
+      return;
+    }
     this.gemini.endSession()
     this.transcribe.finish()
     this.active = false
+
   }
 
   /** Signal end of current user turn but keep connection open */
   finishTurn(): void {
-    if (!this.active) return
+    if (!this.active) {
+      return;
+    }
     this.gemini.finishTurn()
   }
 
   /** Send a video frame (JPEG base64) to Gemini only */
   sendImageChunk(base64Jpeg: string): void {
-    if (!this.active) return
+    if (!this.active) {
+      return;
+    }
     this.gemini.sendImageChunk(base64Jpeg)
   }
 

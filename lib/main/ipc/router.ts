@@ -131,7 +131,6 @@ export function registerIpcHandlers(ctx: IpcContext): void {
   /* ---------------- live-audio handlers ---------------- */
   ipcMain.on('live-audio-start', async () => {
     if (liveAudioService.isActive()) {
-      console.warn('[IPC] live-audio-start ignored – already active');
       return;
     }
     try {
@@ -144,20 +143,20 @@ export function registerIpcHandlers(ctx: IpcContext): void {
         }
       });
       broadcast('live-audio-ready');
-    } catch (err) {
-      console.error('[IPC] Failed to start live audio', err);
+    } catch (_err) {
       broadcast('live-audio-error', 'Failed to start audio services.');
       return;
     }
   });
 
-  ipcMain.on('live-audio-chunk', (_e, chunk: Uint8Array) => {
-    if (!liveAudioService.isActive()) return;
+  ipcMain.on('live-audio-chunk', (_event, chunk: Uint8Array) => {
+    if (!liveAudioService.isActive()) {
+      return;
+    }
     liveAudioService.sendAudioChunk(Buffer.from(chunk));
   });
 
   ipcMain.on('live-audio-stop', () => {
-    if (!liveAudioService.isActive()) return;
     liveAudioService.stop();
   });
 
@@ -166,7 +165,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     liveAudioService.finishTurn();
   });
 
-  ipcMain.on('live-image-chunk', (_e, jpegBase64: string) => {
+  ipcMain.on('live-image-chunk', (_event, jpegBase64: string) => {
     liveAudioService.sendImageChunk(jpegBase64);
   });
 }

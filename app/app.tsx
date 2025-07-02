@@ -3,7 +3,7 @@ import { AI } from './components/mainbar/AI'
 import { useUIState } from './state/UIStateProvider'
 
 export default function App() {
-  const isChatPaneVisible = useUIState((state) => state.matches('chat'))
+  const isChatPaneVisible = useUIState((state) => state.matches('chat') || state.matches('live'))
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-start gap-1 pt-2">

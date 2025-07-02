@@ -12,16 +12,16 @@ export function createAppWindow(isInvisible = false): BrowserWindow {
   const mainWindow = new BrowserWindow({
     // width: Math.floor(width),
     // height: Math.floor(height),
-    fullscreen: !isDev, // easier dev debugging
-    skipTaskbar: !isDev, // show in taskbar during dev
+    fullscreen: true, // easier dev debugging
+    skipTaskbar: true, // show in taskbar during dev
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       sandbox: false
     },
     show: true,
-    alwaysOnTop: !isDev, // avoid hiding behind others in dev
-    frame: false,
-    transparent: !isDev,
+    alwaysOnTop: true, // avoid hiding behind others in dev
+    frame: true,
+    transparent: true,
     // fullscreenable: false,
     hasShadow: false,
     focusable: true,

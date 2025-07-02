@@ -1,4 +1,4 @@
-import { createMachine, assign } from 'xstate'
+import { createMachine, assign, fromPromise } from 'xstate'
 
 
 /**
@@ -173,19 +173,29 @@ export const uiMachine = createMachine<UIContext, UIEvent>(
         initial: 'loading',
         on: {
           MIC_STOP: {
-            target: 'chat.idle',
-            actions: 'stopLiveService'
+            target: '#ui.activeIdle',
+            actions: ['stopLiveService', clearCooldown]
           },
           ESC: {
-            target: 'chat.idle',
-            actions: 'stopLiveService'
+            target: '#ui.activeIdle',
+            actions: ['stopLiveService', clearCooldown]
           }
         },
         states: {
           loading: {
-            entry: ['startLiveService', setCooldown, clearError, 'disableMicTemporarily'],
+            entry: ['startLiveService', setCooldown, clearError],
+            invoke: {
+              id: 'micCooldown',
+              src: 'micCooldown',
+              onDone: {
+                actions: clearCooldown
+              }
+            },
             on: {
-              LIVE_READY: 'streaming',
+              LIVE_READY: {
+                target: 'streaming',
+                actions: [clearCooldown]
+              },
               LIVE_ERROR: {
                 target: 'error',
                 actions: setError
@@ -218,15 +228,10 @@ export const uiMachine = createMachine<UIContext, UIEvent>(
       startLiveService,
       stopLiveService,
       sendChat,
-      cancelChat,
-      disableMicTemporarily: (_ctx, _evt, { actor }) => {
-        // This action is called on entry to live.loading
-        // The micCooldown context is set by the 'setCooldown' action on the transition to live.loading
-        // We clear the cooldown after a delay
-        setTimeout(() => {
-          actor.send({ type: 'CLEAR_COOLDOWN' })
-        }, 1200) // 1.2s cooldown
-      }
+      cancelChat
+    },
+    services: {
+      micCooldown: fromPromise(() => new Promise<void>((resolve) => setTimeout(resolve, 1200)))
     }
   }
 )

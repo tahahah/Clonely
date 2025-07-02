@@ -3,6 +3,7 @@ import { useSelector } from '@xstate/react';
 import { useUIActor } from '../../state/UIStateProvider';
 import { useEffect, useState, useRef } from 'react';
 import { Button } from '../ui/button';
+import { startAudioCapture, stopAudioCapture, AudioCaptureStreams } from '../../lib/audio';
 
 
 
@@ -18,6 +19,14 @@ export const Mainbar = () => {
   }, []);
 
   const uiActor = useUIActor();
+
+  // Debug: log every state transition
+  useEffect(() => {
+    const subscription = uiActor.subscribe((_snap) => {
+
+    });
+    return () => subscription.unsubscribe();
+  }, [uiActor]);
   const { send } = uiActor;
 
   const { chatActive, isRecording } = useSelector(uiActor, (s) => ({
@@ -28,10 +37,19 @@ export const Mainbar = () => {
   // TODO: Recording time should be driven by a state machine service
   const [recordingTime, setRecordingTime] = useState(0);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Live audio streaming refs
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const audioStreamsRef = useRef<AudioCaptureStreams | null>(null);
+  const frameIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const videoElemRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
+
     if (isRecording) {
       setRecordingTime(0); // Reset timer
+
       recordingIntervalRef.current = setInterval(() => {
         setRecordingTime((prevTime) => prevTime + 1);
       }, 1000);
@@ -59,11 +77,107 @@ export const Mainbar = () => {
     return `${minutes}:${secs}`;
   };
 
-  const handleMicClick = () => {
+  const handleMicClick = async () => {
+    console.log("isRecording: "+isRecording)
     if (isRecording) {
+      // ======== Stop Recording ========
+      // Notify backend we've finished the current turn
+      window.api.send('live-audio-done');
+
+      // Clean up audio nodes
+      processorRef.current?.disconnect();
+      audioCtxRef.current?.close();
+      processorRef.current = null;
+      audioCtxRef.current = null;
+
+      // Stop media tracks
+      if (audioStreamsRef.current) {
+        await stopAudioCapture(audioStreamsRef.current);
+        audioStreamsRef.current = null;
+      }
+
+      // Clear timers
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+      if (frameIntervalRef.current) {
+        clearInterval(frameIntervalRef.current);
+      }
+
+      // Cleanup video/canvas
+      if (videoElemRef.current) {
+        (videoElemRef.current as HTMLVideoElement).srcObject = null;
+        videoElemRef.current = null;
+      }
+      canvasRef.current = null;
+
+      setRecordingTime(0);
+
+      // Tell state machine to stop
       send({ type: 'MIC_STOP' });
     } else {
-      send({ type: 'MIC_START' });
+      try {
+        // ======== Start Recording ========
+        const streams = await startAudioCapture();
+        audioStreamsRef.current = streams;
+
+        // ---- PCM streaming setup ----
+        const ctx = new AudioContext({ sampleRate: 16000 });
+        await ctx.resume();
+        audioCtxRef.current = ctx;
+
+        const sourceNode = ctx.createMediaStreamSource(streams.combinedStream);
+        const processor = ctx.createScriptProcessor(4096, 1, 1);
+        processorRef.current = processor;
+
+        processor.onaudioprocess = (e) => {
+          const input = e.inputBuffer.getChannelData(0);
+          // Convert Float32 [-1,1] to 16-bit PCM little-endian
+          const pcm = new Int16Array(input.length);
+          for (let i = 0; i < input.length; i++) {
+            const s = Math.max(-1, Math.min(1, input[i]));
+            pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
+          window.api.send('live-audio-chunk', new Uint8Array(pcm.buffer));
+        };
+
+        sourceNode.connect(processor);
+        processor.connect(ctx.destination); // required in some browsers
+
+        // ---- Screen frame capture setup ----
+        const videoElem = document.createElement('video');
+        videoElem.muted = true;
+        videoElem.srcObject = streams.systemStream;
+        await videoElem.play();
+        videoElemRef.current = videoElem;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 1280;
+        canvas.height = 720;
+        canvasRef.current = canvas;
+        const ctx2d = canvas.getContext('2d');
+        frameIntervalRef.current = setInterval(() => {
+          if (!ctx2d || videoElem.readyState < 2) return;
+          ctx2d.drawImage(videoElem, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
+          const base64 = dataUrl.split(',')[1];
+          window.api.send('live-image-chunk', base64);
+        }, 1000);
+
+        // Tell the UI state machine to transition to live mode
+        send({ type: 'MIC_START' });
+
+        // Reset and start local timer for UI display
+        setRecordingTime(0);
+        recordingIntervalRef.current = setInterval(() => {
+          setRecordingTime((prev) => prev + 1);
+        }, 1000);
+      } catch (_error) {
+
+        if (audioStreamsRef.current) {
+          await stopAudioCapture(audioStreamsRef.current);
+        }
+      }
     }
   };
 
