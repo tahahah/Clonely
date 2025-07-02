@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react';
+import React, { Fragment, memo } from 'react';
 import { jsx, jsxs } from 'react/jsx-runtime';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
@@ -41,4 +41,4 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   return <div className="markdown-body">{renderedContent}</div>;
 };
 
-export default MarkdownRenderer;
+export default memo(MarkdownRenderer);
