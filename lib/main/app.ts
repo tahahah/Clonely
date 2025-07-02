@@ -1,17 +1,15 @@
 import { BrowserWindow, shell, app } from 'electron'
 
+// Disable hardware acceleration to prevent flickering on some systems
+app.disableHardwareAcceleration()
+
 import { join } from 'path'
 import { registerWindowIPC } from '@/lib/window/ipcEvents'
 import appIcon from '@/resources/build/icon.png?asset'
 
 export function createAppWindow(isInvisible = false): BrowserWindow {
-  // const isDev = !app.isPackaged && !!process.env.ELECTRON_RENDERER_URL;
-  const isDev = false;
-  // Get the primary display's size and use it for the window dimensions.
-  const { width, height } = require('electron').screen.getPrimaryDisplay().workAreaSize
+
   const mainWindow = new BrowserWindow({
-    // width: Math.floor(width),
-    // height: Math.floor(height),
     fullscreen: true, // easier dev debugging
     skipTaskbar: true, // show in taskbar during dev
     webPreferences: {
@@ -20,19 +18,17 @@ export function createAppWindow(isInvisible = false): BrowserWindow {
     },
     show: true,
     alwaysOnTop: true, // avoid hiding behind others in dev
-    frame: true,
-    transparent: true,
-    // fullscreenable: false,
+    frame: false,
+    transparent: false,
     hasShadow: false,
     focusable: true,
     icon: appIcon,
     titleBarStyle: 'hiddenInset',
     title: 'Clonely',
-    // maximizable: false,
     resizable: false,
-    backgroundMaterial: isDev ? undefined : 'acrylic',
-    backgroundColor: isDev ? '#1e1e1e' : undefined
+    backgroundMaterial: 'auto',
   })
+  
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
 
@@ -53,6 +49,7 @@ export function createAppWindow(isInvisible = false): BrowserWindow {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+    mainWindow.focus()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

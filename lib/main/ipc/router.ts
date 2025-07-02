@@ -143,7 +143,8 @@ export function registerIpcHandlers(ctx: IpcContext): void {
         }
       });
       broadcast('live-audio-ready');
-    } catch (_err) {
+    } catch (err) {
+      console.error('Failed to start audio services:', err);
       broadcast('live-audio-error', 'Failed to start audio services.');
       return;
     }

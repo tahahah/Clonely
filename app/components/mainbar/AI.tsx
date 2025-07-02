@@ -15,11 +15,12 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
   const actor = useUIActor();
   const { send } = actor;
 
-  const { state, isChatIdle, isChatLoading, isChatError } = useSelector(actor, (s) => ({
+  const { state, isChatIdle, isChatLoading, isChatError, isLiveActive } = useSelector(actor, (s) => ({
     state: s,
     isChatIdle: s.matches({ chat: 'idle' }),
     isChatLoading: s.matches({ chat: 'loading' }),
     isChatError: s.matches({ chat: 'error' }),
+    isLiveActive: s.matches({ live: 'active' }),
   }));
 
   const [answer, setAnswer] = useState<string | null>(null);
@@ -133,14 +134,16 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
     }
 
     return (
-      <div className="flex w-full h-full gap-2">
+      <div className="flex w-full h-full gap-3">
         {/* Left Column for TranscriptPane */}
-        <div className="w-1/3 h-full min-h-0">
-          <TranscriptPane />
-        </div>
+        {isLiveActive && (
+          <div className="w-2/3 h-full min-h-0">
+            <TranscriptPane />
+          </div>
+        )}
 
         {/* Right Column for Chat Content */}
-        <div className="flex flex-col w-2/3 h-full gap-2">
+        <div className="flex flex-col w-full h-full gap-2">
           {contentToDisplay}
           <div className="relative w-full">
             <Input
@@ -164,8 +167,10 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
               }}
             />
             <div className="absolute right-4 top-1/2 -translate-y-1/2">
-              <Command className="size-4" />
-              <CornerDownLeft className="size-4" />
+              <div className="flex gap-2 pt-2">
+                <Command className="size-4" />
+                <CornerDownLeft className="size-4" />
+              </div>
             </div>
           </div>
         </div>
