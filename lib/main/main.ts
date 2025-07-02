@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { ClonelyApp } from './Clonely'
 import { AudioHelper } from '../audio/AudioHelper'
 
+
 // Initialize audio capture functionality before the app is ready.
 AudioHelper.initialize()
 
