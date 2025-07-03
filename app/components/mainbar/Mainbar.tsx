@@ -116,7 +116,7 @@ export const Mainbar = () => {
             if (!uiActor.getSnapshot().matches({ live: 'streaming' })) return;
             window.api.send('live-image-chunk', jpeg);
           },
-          { width: 640, height: 360, intervalMs: 1000, quality: 0.7}
+          { width: 1280, height: 720, intervalMs: 1000, quality: 1}
         );
         frameHandleRef.current = frameHandle;
 

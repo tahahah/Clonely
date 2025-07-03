@@ -1,5 +1,6 @@
 import { Groq } from "groq-sdk";
 import { z } from "zod";
+import { GROQ_SYSTEM_PROMPT } from "./systemPrompt";
 
 const GROQ_API_KEY =
   (import.meta as any).env?.VITE_GROQ_API_KEY;
@@ -32,7 +33,7 @@ export class GroqHelper {
     console.warn('GroqHelper: streamQuestions called with:', { prevQuestions, currentTranscript });
     const systemContent = JSON.stringify({
       role: "system",
-      content: "You are a real-time assistant that analyzes live call transcripts to extract the most relevant and high-utility questions the user needs answered at that moment. Your output helps guide a **smarter AI assistant** that will act on the user’s behalf.\n\nYour output must follow this JSON format only:\n{\n  \"actions\": [\n    \"🧠 Example question 1 in the voice of the user\",\n    \"💡 Example question 2 in the voice of the user\"\n  ]\n}\n\nRules:\n- Always write actions/questions **in the voice of the user** (e.g., \"What should I do if...\", \"Can you explain why...\").\n- These actions are **not used by the user**, but forwarded to another assistant — so clarity and precision are critical.\n- **Start each question with a relevant emoji** that reflects the topic or tone (e.g., ❓, 📊, ⚠️, 🤔).\n- **Prioritize utility and relevance over length.** Keep questions concise but meaningful.\n- Retain previously suggested questions only if they are still relevant and high priority. Replace or remove otherwise.\n- Do not include explanations or commentary — just return the list of questions in JSON format.",
+      content: GROQ_SYSTEM_PROMPT,
     }); // System message for Groq
 
     const userContent = `Here are the previous questions you suggested:\n<prev_questions>\n${prevQuestions.join('\n')}\n</prev_questions>\n\nupdated call transcript and list the most urgent, high-value questions I currently need answered:\n<current_transcript>\n${currentTranscript}\n</current_transcript>`; // User message with previous questions and current transcript
@@ -59,9 +60,7 @@ export class GroqHelper {
     // Parse and validate JSON after the stream is complete
     try {
       const jsonData = JSON.parse(fullResponseContent);
-      console.warn('GroqHelper: Full response content:', fullResponseContent);
       const validated = ActionSchema.parse(jsonData);
-      console.warn('GroqHelper: Parsed and validated actions:', validated.actions);
       return validated; // Return validated data
     } catch (error) {
       console.error("Error parsing or validating Groq response:", error);

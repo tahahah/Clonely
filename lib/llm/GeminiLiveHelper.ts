@@ -102,7 +102,7 @@ export class GeminiLiveHelper {
         },
         onclose: (e) => console.warn('[GeminiLive] closed', e.reason),
       },
-      config: { responseModalities: [Modality.TEXT], systemInstruction: GEMINI_SYSTEM_PROMPT },
+      config: { responseModalities: [Modality.TEXT], systemInstruction: GEMINI_SYSTEM_PROMPT},
     })) as unknown as LiveSession;
 
     // detach async listener to forward text
