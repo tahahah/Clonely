@@ -81,9 +81,12 @@ export class GeminiLiveHelper {
           const tText = (m as any).text;
           if (tText) {
             if (this.turnJustCompleted) {
-              onMessage({ reset: true });
+              // This is the first chunk of a new turn.
+              // Send a reset signal along with the text from this first chunk.
+              onMessage({ reset: true, text: tText });
               this.turnJustCompleted = false;
             } else {
+              // This is a subsequent chunk in the same turn.
               onMessage({ text: tText });
             }
           }

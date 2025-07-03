@@ -40,6 +40,7 @@ export class LiveAudioService {
       await Promise.all([
         this.gemini.startSession((chunk) => {
           onGeminiChunk?.(chunk);
+          console.warn('Gemini chunk:', chunk);
         }),
         this.transcribe.start((text) => {
           onTranscript?.(text);
