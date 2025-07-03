@@ -1,5 +1,4 @@
 import { globalShortcut, app, BrowserWindow } from 'electron'
-import { appState, UIState } from '../state/AppStateMachine'
 
 /**
  * Handles registration of global keyboard shortcuts.
@@ -7,10 +6,11 @@ import { appState, UIState } from '../state/AppStateMachine'
  * perform any window manipulations directly.
  */
 export class ShortcutsHelper {
-  constructor(
-    private mainWindow: BrowserWindow,
-    private getChatWindow: () => BrowserWindow | null
-  ) {}
+  private mainWindow: BrowserWindow
+
+  constructor(mainWindow: BrowserWindow) {
+    this.mainWindow = mainWindow
+  }
 
   public updateMainWindow(win: BrowserWindow): void {
     this.mainWindow = win;
@@ -19,20 +19,15 @@ export class ShortcutsHelper {
   public registerGlobalShortcuts(): void {
     // Ctrl+Space always listens globally
     globalShortcut.register('CommandOrControl+Space', () => {
-      const chatWindow = this.getChatWindow();
       const anyVisible =
-        (this.mainWindow && !this.mainWindow.isDestroyed() && this.mainWindow.isVisible()) ||
-        (chatWindow && !chatWindow.isDestroyed() && chatWindow.isVisible());
+        (this.mainWindow && !this.mainWindow.isDestroyed() && this.mainWindow.isVisible());
 
       if (anyVisible) {
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) this.mainWindow.hide();
-        if (chatWindow && !chatWindow.isDestroyed()) chatWindow.hide();
+        this.mainWindow.hide();
         // Unregister other shortcuts
         this.unregisterWindowShortcuts();
       } else {
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) this.mainWindow.show();
-        if (chatWindow && !chatWindow.isDestroyed()) chatWindow.show();
-        if (chatWindow && !chatWindow.isDestroyed()) chatWindow.focus();
+        this.mainWindow.show();
         // Register other shortcuts
         this.registerWindowShortcuts();
       }
@@ -51,27 +46,15 @@ export class ShortcutsHelper {
   private registerWindowShortcuts(): void {
     // Enter: open or submit in chat
     globalShortcut.register('CommandOrControl+Enter', () => {
-      const chatWindow = this.getChatWindow();
-      if (this.mainWindow.isVisible()) {
-        if (chatWindow && !chatWindow.isDestroyed() && !chatWindow.isFocused()) {
-          chatWindow.show();
-        } else {
-          const currentState = appState.state;
-          if (currentState === UIState.ActiveIdle) {
-            appState.dispatch('OPEN_CHAT');
-          } else if (
-            currentState === UIState.ReadyChat ||
-            currentState === UIState.Error
-          ) {
-            appState.dispatch('SUBMIT');
-          }
-        }
+      this.mainWindow?.webContents.send('shortcut:ctrl-enter');
+      if (this.mainWindow?.isVisible()) {
+        this.mainWindow?.focus()
       }
     });
 
     // Escape: send ESC to state machine
     globalShortcut.register('Escape', () => {
-      appState.dispatch('ESC');
+      this.mainWindow?.webContents.send('shortcut:esc');
     });
   }
 
