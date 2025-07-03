@@ -6,7 +6,6 @@ import { Command, CornerDownLeft } from 'lucide-react';
 import MarkdownRenderer from '../MarkdownRenderer';
 import TranscriptPane from '../TranscriptPane';
 
-
 interface AIProps {
   isChatPaneVisible: boolean;
 }
@@ -102,79 +101,84 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
     setInputValue(e.target.value);
   };
 
-  const renderContent = () => {
+  const renderChatContent = () => {
     if (isChatError) {
       return (
-        <div className="p-4 text-red-500 glass rounded-lg w-full text-center">
+        <div className="flex-1 flex items-center justify-center p-4 text-red-500 glass rounded-lg">
           {errorMessage || 'An error occurred.'}
         </div>
       );
     }
 
-    let contentToDisplay;
-
     if (errorMessage) {
-      contentToDisplay = (
-        <div className="p-4 text-red-500 glass rounded-lg w-full text-center">
+      return (
+        <div className="flex-1 flex items-center justify-center p-4 text-red-500 glass rounded-lg">
           {errorMessage}
         </div>
       );
-    } else if (isChatLoading && !answer) {
-      contentToDisplay = (
-        <div className="p-4 text-md glass rounded-lg w-full text-left min-h-[56px] max-h-[90%] overflow-y-auto overflow-x-hidden animate-pulse">
+    }
+
+    if (isChatLoading && !answer) {
+      return (
+        <div className="flex-1 p-4 glass rounded-lg animate-pulse">
           Loading...
         </div>
-      ); // Placeholder for loading animation
-    } else if (answer) {
-      contentToDisplay = (
-        <div className="p-4 text-md glass rounded-lg w-full text-left flex-grow min-h-0 overflow-y-auto break-words">
-          <MarkdownRenderer content={answer || ''} />
+      );
+    }
+
+    if (answer) {
+      return (
+        <div className="flex-1 p-4 glass rounded-lg overflow-y-auto ">
+          <MarkdownRenderer content={answer} />
         </div>
       );
     }
 
     return (
-      <div className="flex w-full h-full gap-3">
-        {/* Left Column for TranscriptPane */}
-        {isLiveActive && (
-          <div className="w-2/3 h-full min-h-0">
-            <TranscriptPane />
-          </div>
-        )}
+      <div className="flex-1 flex items-center justify-center p-4 glass rounded-lg text-gray-500">
+        Start a conversation...
+      </div>
+    );
+  };
 
-        {/* Right Column for Chat Content */}
-        <div className="flex flex-col w-full h-full gap-2">
-          {contentToDisplay}
-          <div className="relative w-full">
-            <Input
-              ref={inputRef}
-              value={inputValue}
-              onChange={handleInputChange}
-              placeholder={
-                isChatLoading
-                  ? 'Generating answer...'
-                  : answer
-                  ? 'Ask a follow-up...'
-                  : 'Ask me anything...'
-              }
-              className="glass rounded-full w-full pr-14"
-              disabled={isChatLoading}
-            />
-            <div className="absolute right-4 top-1/2 -translate-y-1/2">
-              <div className="flex gap-2 pt-2">
-                <Command className="size-4" />
-                <CornerDownLeft className="size-4" />
-              </div>
+  return (
+    <div className="flex max-h-full w-full bg-transparent p-2 gap-3">
+      {/* Left Panel - Transcript (Fixed Width) */}
+      {isLiveActive && (
+        <div className="w-80 flex-shrink-0 h-full">
+          <TranscriptPane />
+        </div>
+      )}
+
+      {/* Right Panel - Chat (Flexible Width) */}
+      <div className="flex-1 flex flex-col h-full gap-2 min-w-0">
+        {/* Chat Content - Expands to fill available space */}
+        {renderChatContent()}
+        
+        {/* Input Area - Fixed Height */}
+        <div className="relative max-h-10 flex-shrink-0">
+          <Input
+            ref={inputRef}
+            value={inputValue}
+            onChange={handleInputChange}
+            placeholder={
+              isChatLoading
+                ? 'Generating answer...'
+                : answer
+                ? 'Ask a follow-up...'
+                : 'Ask me anything...'
+            }
+            className="glass rounded-full w-full pr-14"
+            disabled={isChatLoading}
+          />
+          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <div className="flex gap-2 pt-2">
+              <Command className="size-4" />
+              <CornerDownLeft className="size-4" />
             </div>
           </div>
         </div>
       </div>
-    )
-  }
-
-  return (
-    <div className="flex items-start justify-center h-full w-full bg-transparent p-2 font-sans">
-      {renderContent()}
     </div>
   );
 };

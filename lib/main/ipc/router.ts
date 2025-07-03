@@ -169,4 +169,8 @@ export function registerIpcHandlers(ctx: IpcContext): void {
   ipcMain.on('live-image-chunk', (_event, jpegBase64: string) => {
     liveAudioService.sendImageChunk(jpegBase64);
   });
+
+  ipcMain.on('live-audio-send-text-input', (_event, text: string) => {
+    liveAudioService.sendTextInput(text);
+  });
 }
