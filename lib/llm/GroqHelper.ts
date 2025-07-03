@@ -1,4 +1,34 @@
 import { Groq } from "groq-sdk";
+
+// Debounce utility function for async functions
+function debounce<T extends (...args: any[]) => Promise<any>>(func: T, delay: number): (...args: Parameters<T>) => Promise<Awaited<ReturnType<T>>> {
+  let timeoutId: NodeJS.Timeout | null = null;
+  let latestPromiseResolve: ((value: Awaited<ReturnType<T>> | PromiseLike<Awaited<ReturnType<T>>>) => void) | null = null;
+  let latestPromiseReject: ((reason?: any) => void) | null = null;
+
+  return function(this: any, ...args: Parameters<T>): Promise<Awaited<ReturnType<T>>> {
+    return new Promise((resolve, reject) => {
+      latestPromiseResolve = resolve;
+      latestPromiseReject = reject;
+
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
+      timeoutId = setTimeout(() => {
+        const currentResolve = latestPromiseResolve;
+        const currentReject = latestPromiseReject;
+
+        Promise.resolve(func.apply(this, args))
+          .then(currentResolve!)
+          .catch(currentReject!);
+
+        latestPromiseResolve = null;
+        latestPromiseReject = null;
+      }, delay);
+    });
+  };
+}
 import { z } from "zod";
 import { GROQ_SYSTEM_PROMPT } from "./systemPrompt";
 
@@ -20,12 +50,21 @@ const ActionSchema = z.object({
 
 export class GroqHelper {
   private readonly modelName: string;
+  private debouncedStreamQuestions: (
+    prevQuestions: string[],
+    currentTranscript: string,
+    onChunk: (chunk: string) => void
+  ) => Promise<z.infer<typeof ActionSchema>>;
 
   constructor(modelName: string = "qwen/qwen3-32b") {
     this.modelName = modelName;
+    this.debouncedStreamQuestions = debounce(
+      this._streamQuestions.bind(this), // Bind 'this' to the private method
+      2000 // 2-second debounce delay
+    );
   }
 
-  public async streamQuestions(
+  private async _streamQuestions(
     prevQuestions: string[],
     currentTranscript: string,
     onChunk: (chunk: string) => void
@@ -66,5 +105,14 @@ export class GroqHelper {
       console.error("Error parsing or validating Groq response:", error);
       throw error; // Re-throw the error for upstream handling
     }
+  }
+
+  // Public method that calls the debounced version
+  public async streamQuestions(
+    prevQuestions: string[],
+    currentTranscript: string,
+    onChunk: (chunk: string) => void
+  ): Promise<z.infer<typeof ActionSchema>> {
+    return this.debouncedStreamQuestions(prevQuestions, currentTranscript, onChunk);
   }
 }

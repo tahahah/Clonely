@@ -148,6 +148,9 @@ A video or call presenting a problem the user might need help with.
 When you detect a relevant moment:
 Generate 1–5 short, actionable prompt options that the user might want to ask the assistant.
 
+At least 1 of these actions should be address the user's situation at hand in the context of the entire longer meeting.
+For example, if the user is asked about a sub-question within a bigger technical question, there should be one action for answer the sub-question in the context of the bigger problem. There should also be another action addressing the bigger problem as a whole.
+
 Write them in the user’s voice: “How do I…”, “What should I say…”, etc.
 
 Precede each prompt with a relevant emoji (🧠, 💡, 🤔, 🗣️, etc.) that reflects tone or intent.
