@@ -14,7 +14,8 @@ export interface LiveAudioCallbacks {
 export class LiveAudioService {
   private readonly gemini = new GeminiLiveHelper()
   private readonly transcribe = new TranscribeHelper()
-  private active = false
+  private active = false;
+  private geminiAudioMuted = false; // New flag to control Gemini audio
 
   isActive(): boolean {
     return this.active
@@ -56,8 +57,10 @@ export class LiveAudioService {
     if (!this.active) {
       return;
     }
-    this.gemini.sendAudioChunk(chunk)
-    this.transcribe.sendChunk(chunk)
+    if (!this.geminiAudioMuted) {
+      this.gemini.sendAudioChunk(chunk);
+    }
+    this.transcribe.sendChunk(chunk);
   }
 
   /** Gracefully end both streams and reset */
@@ -92,5 +95,11 @@ export class LiveAudioService {
     if (this.gemini.canAcceptTextInput()) {
       this.gemini.sendTextInput(text)
     }
+  }
+
+  /** Toggle whether audio is sent to Gemini */
+  toggleGeminiAudio(mute: boolean): void {
+    this.geminiAudioMuted = mute;
+    console.warn(`Gemini audio muted: ${this.geminiAudioMuted}`);
   }
 }

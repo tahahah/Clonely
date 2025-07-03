@@ -170,7 +170,11 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     liveAudioService.sendImageChunk(jpegBase64);
   });
 
-  ipcMain.on('live-audio-send-text-input', (_event, text: string) => {
-    liveAudioService.sendTextInput(text);
+  ipcMain.on('live-audio-toggle-gemini', (_event, mute: boolean) => {
+    liveAudioService.toggleGeminiAudio(mute);
+  });
+
+  ipcMain.on('live-audio-send-text-input', (_event, _text: string) => {
+    liveAudioService.sendTextInput(_text);
   });
 }

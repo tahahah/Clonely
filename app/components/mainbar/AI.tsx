@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useSelector } from '@xstate/react';
 import { useUIActor } from '../../state/UIStateProvider';
 import { Input } from '../ui/input';
-import { Command, CornerDownLeft } from 'lucide-react';
+import { Command, CornerDownLeft, Mic, MicOff } from 'lucide-react';
 import MarkdownRenderer from '../MarkdownRenderer';
 import TranscriptPane from '../TranscriptPane';
 
@@ -14,6 +14,7 @@ interface AIProps {
 export const AI: React.FC<AIProps> = ({ isChatPaneVisible, onContentChange }) => {
   const actor = useUIActor();
   const { send } = actor;
+  const [isGeminiMuted, setIsGeminiMuted] = useState(false); // State for Gemini mute status
 
   const { state, isChatIdle, isChatLoading, isChatError, isLiveActive } = useSelector(actor, (s) => ({
     state: s,
@@ -176,11 +177,24 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible, onContentChange }) =>
                 ? 'Ask a follow-up...'
                 : 'Ask me anything...'
             }
-            className="glass rounded-full w-full pr-14"
+            className="glass rounded-full w-full mr-14"
             disabled={isChatLoading}
           />
           <div className="absolute right-4 top-1/2 -translate-y-1/2">
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 items-center">
+              {isLiveActive && (
+                <button
+                  onClick={() => {
+                    const newMuteStatus = !isGeminiMuted;
+                    setIsGeminiMuted(newMuteStatus);
+                    window.api.send('live-audio-toggle-gemini', newMuteStatus);
+                  }}
+                  className="rounded-full hover:bg-gray-200/70 focus:outline-none flex items-center justify-center h-4 w-4"
+                  title={isGeminiMuted ? 'Unmute Gemini Audio' : 'Mute Gemini Audio'}
+                >
+                  {isGeminiMuted ? <MicOff className="size-4 text-red-500" /> : <Mic className="size-4" />}
+                </button>
+              )}
               <Command className="size-4" />
               <CornerDownLeft className="size-4" />
             </div>
