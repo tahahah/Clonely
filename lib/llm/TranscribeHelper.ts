@@ -38,6 +38,7 @@ export class TranscribeHelper {
           smart_format: true,
           encoding: 'linear16',
           sample_rate: 16000,
+          diarize: true,
         });
 
         this.connection.on(LiveTranscriptionEvents.Open, () => {
@@ -51,10 +52,9 @@ export class TranscribeHelper {
         });
 
         this.connection.on(LiveTranscriptionEvents.Transcript, (data) => {
-          const transcript: string = data.channel.alternatives[0]?.transcript;
-          if (transcript) {
-            console.warn('Deepgram Transcript:', transcript);
-            onTranscript(transcript);
+          const alternative = data.channel.alternatives[0];
+          if (alternative?.transcript) {
+            onTranscript(alternative);
           }
         });
 

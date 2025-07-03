@@ -12,6 +12,7 @@ const TranscriptPane: React.FC = () => {
   const [actions, setActions] = useState<string[]>([]);
   const transcriptLinesRef = useRef<string[]>([]);
   const actionsRef = useRef<string[]>([]);
+  const formattedTranscriptRef = useRef<string>('');
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
@@ -20,20 +21,44 @@ const TranscriptPane: React.FC = () => {
     if (isLiveActive && window.api && typeof window.api.receive === 'function') {
       console.warn('TranscriptPane: Setting up IPC listener for live-transcript');
 
-      const onTranscript = (data: string) => {
-        console.warn('TranscriptPane: Received transcript:', data);
+      const onTranscript = (alternative: { transcript: string; words: { speaker: number; punctuated_word: string }[] }) => {
+        console.warn('TranscriptPane: Received transcript object:', alternative);
+        const plainTranscript = alternative.transcript;
+        if (!plainTranscript) return;
+
         setTranscriptLines(prev => {
-          const next = [...prev, data];
+          const next = [...prev, plainTranscript];
           transcriptLinesRef.current = next;
           return next;
         });
+
+        // Format the new transcript part with speaker info
+        let newFormattedPart = '';
+        if (alternative.words && alternative.words.length > 0) {
+          let lastSpeaker = -1;
+          for (const word of alternative.words) {
+            if (word.speaker !== lastSpeaker) {
+              lastSpeaker = word.speaker;
+              if (newFormattedPart !== '') {
+                newFormattedPart += '\n';
+              }
+              newFormattedPart += `Speaker ${word.speaker}: `;
+            }
+            newFormattedPart += word.punctuated_word + ' ';
+          }
+        } else {
+          newFormattedPart = plainTranscript;
+        }
+
+        // Append to the full formatted transcript history
+        formattedTranscriptRef.current += newFormattedPart.trim() + '\n';
 
         // Debounce action generation to avoid excessive API calls
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(async () => {
           try {
-            console.warn('TranscriptPane: Invoking streamGroqQuestions with transcript length', transcriptLinesRef.current.length);
-            const validatedActions = await window.api.invoke('streamGroqQuestions', actionsRef.current, transcriptLinesRef.current.join('\n'));
+            console.warn('TranscriptPane: Invoking streamGroqQuestions with formatted transcript');
+            const validatedActions = await window.api.invoke('streamGroqQuestions', actionsRef.current, formattedTranscriptRef.current);
             console.warn('TranscriptPane: Received actions', validatedActions);
             console.warn('TranscriptPane: Validated actions length', validatedActions.length);
             // Strip newlines from each action to ensure single-line display
@@ -59,6 +84,7 @@ const TranscriptPane: React.FC = () => {
       transcriptLinesRef.current = [];
       setActions([]);
       actionsRef.current = [];
+      formattedTranscriptRef.current = '';
       return undefined; // Explicitly return undefined
     }
     return undefined; // Default return for paths that don't return a cleanup function
