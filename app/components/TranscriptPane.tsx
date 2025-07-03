@@ -121,7 +121,7 @@ const TranscriptPane: React.FC = () => {
             {actions.map((action, index) => (
               <div
                 key={index}
-                className="flex items-start p-2 rounded-md cursor-pointer transition-colors duration-200"
+                className="flex items-start p-1 rounded-md cursor-pointer transition-colors duration-200 hover:bg-gray-200/70"
                 onClick={() => window.api?.send('live-audio-send-text-input', action)}
               >
                 <span className="mr-2">•</span>

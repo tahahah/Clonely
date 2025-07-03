@@ -8,9 +8,10 @@ import TranscriptPane from '../TranscriptPane';
 
 interface AIProps {
   isChatPaneVisible: boolean;
+  onContentChange?: (isWide: boolean) => void;
 }
 
-export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
+export const AI: React.FC<AIProps> = ({ isChatPaneVisible, onContentChange }) => {
   const actor = useUIActor();
   const { send } = actor;
 
@@ -56,7 +57,14 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
         return;
       }
       if (chunk.text) {
-        setAnswer((prev) => (prev || '') + chunk.text);
+        setAnswer((prev) => {
+          const newAnswer = (prev || '') + chunk.text;
+          const containsCode = /```/.test(newAnswer);
+          const wordCount = newAnswer.split(/\s+/).filter(Boolean).length;
+          const shouldBeWide = containsCode || wordCount > 100;
+          onContentChange?.(shouldBeWide);
+          return newAnswer;
+        });
       }
     };
 
@@ -89,7 +97,7 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible }) => {
       window.api.removeAllListeners('api-error');
       window.api.removeAllListeners('set-initial-input');
     };
-  }, [send, isChatLoading]);
+  }, [send, isChatLoading, onContentChange]);
 
   useEffect(() => {
     if (isChatPaneVisible && (isChatIdle || isChatError)) {
