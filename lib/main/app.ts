@@ -1,38 +1,36 @@
-import { BrowserWindow, shell, app, screen } from 'electron'
+import { BrowserWindow, shell, app } from 'electron'
+
+// Disable hardware acceleration to prevent flickering on some systems
+app.disableHardwareAcceleration()
 
 import { join } from 'path'
-import { registerWindowIPC, registerChatWindowIPC } from '@/lib/window/ipcEvents'
+import { registerWindowIPC } from '@/lib/window/ipcEvents'
 import appIcon from '@/resources/build/icon.png?asset'
 
 export function createAppWindow(isInvisible = false): BrowserWindow {
-  const workArea = screen.getPrimaryDisplay().workAreaSize
-  const screenWidth = workArea.width
 
-  // Create the main window.
   const mainWindow = new BrowserWindow({
-    width: 600,
-    height: 50,
-    x: Math.floor(screenWidth / 2) - 300,
-    y: 10,
-    skipTaskbar: true,
+    fullscreen: true, // easier dev debugging
+    skipTaskbar: true, // show in taskbar during dev
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       sandbox: false
     },
-    show: false,
-    alwaysOnTop: true,
+    show: true,
+    alwaysOnTop: true, // avoid hiding behind others in dev
     frame: false,
-    transparent: true,
-    fullscreenable: false,
+    transparent: false,
     hasShadow: false,
     focusable: true,
     icon: appIcon,
     titleBarStyle: 'hiddenInset',
-    title: 'CluelyHireMe',
-    maximizable: false,
+    title: 'Clonely',
     resizable: false,
-    backgroundMaterial: 'acrylic'
+    backgroundMaterial: 'auto',
   })
+  
+  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  mainWindow.setAlwaysOnTop(true, 'screen-saver', 1);
 
   if (!isInvisible) {
     // Prevent the window from appearing in most software screen captures (Windows).
@@ -51,6 +49,7 @@ export function createAppWindow(isInvisible = false): BrowserWindow {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+    mainWindow.focus()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -66,67 +65,4 @@ export function createAppWindow(isInvisible = false): BrowserWindow {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
   return mainWindow
-}
-
-export function createChatWindow(isInvisible = false): BrowserWindow {
-  const workArea = screen.getPrimaryDisplay().workAreaSize
-  const screenWidth = workArea.width
-  const screenHeight = workArea.height
-
-  // Create the main window.
-  const chatWindow = new BrowserWindow({
-    width: 600,
-    height: Math.floor(screenHeight / 2),
-    x: Math.floor(screenWidth / 2) - 300,
-    y: 60,
-    skipTaskbar: true,
-    webPreferences: {
-      preload: join(__dirname, '../preload/preload.js'),
-      sandbox: false
-    },
-    show: false,
-    alwaysOnTop: true,
-    frame: false,
-    transparent: true,
-    fullscreenable: false,
-    hasShadow: false,
-    focusable: true,
-    icon: appIcon,
-    titleBarStyle: 'hiddenInset',
-    title: 'Chat',
-    maximizable: false,
-    resizable: false
-  })
-
-  if (!isInvisible) {
-    // Prevent the window from appearing in most software screen captures (Windows).
-    chatWindow.setContentProtection(true)
-    if (process.platform === 'win32') {
-      void import('@/lib/main/protectWindow')
-        .then(({ applyWindowCaptureProtection }) => {
-          applyWindowCaptureProtection(chatWindow)
-        })
-        .catch(() => {})
-    }
-  }
-
-  registerChatWindowIPC(chatWindow)
-
-  chatWindow.on('ready-to-show', () => {
-    chatWindow.show()
-  })
-
-  chatWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
-
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
-  if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
-    chatWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/ai.html`)
-  } else {
-    chatWindow.loadFile(join(__dirname, '../renderer/ai.html'))
-  }
-  return chatWindow
 }

@@ -3,19 +3,14 @@ import { EventEmitter } from 'events'
 /**
  * Finite-state machine for UI flow.
  *
- * Hidden        ── Ctrl+Space ──► ActiveIdle
- * ActiveIdle    ── Ctrl+Space ──► Hidden
  * ActiveIdle    ── Ctrl+Enter  ──► ReadyChat
  * ReadyChat     ── Ctrl+Enter/Submit ─► Loading
  * ReadyChat     ── Esc          ──► ActiveIdle
- * ReadyChat     ── Ctrl+Space   ──► Hidden
  * Loading       ── API_SUCCESS  ──► ReadyChat
  * Loading       ── API_ERROR    ──► Error
  * Loading       ── Esc          ──► ActiveIdle (cancel request)
- * Loading       ── Ctrl+Space   ──► Hidden
  * Error         ── Submit       ──► Loading
  * Error         ── Esc          ──► ActiveIdle
- * Error         ── Ctrl+Space   ──► Hidden
  */
 
 export enum UIState {
