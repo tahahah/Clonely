@@ -45,7 +45,6 @@ export const AI = () => {
     const handleStreamChunk = (chunk: ChatChunk) => {
       if (chunk.reset) {
         setAnswer('')
-        return
       }
       if (chunk.text) {
         setAnswer((prev) => (prev || '') + chunk.text)
