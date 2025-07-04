@@ -55,7 +55,6 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible, onContentChange }) =>
     const handleStreamChunk = (chunk: { text?: string; reset?: boolean }) => {
       if (chunk.reset) {
         setAnswer('');
-        return;
       }
       if (chunk.text) {
         setAnswer((prev) => {
