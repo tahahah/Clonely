@@ -32,6 +32,7 @@ export class ClonelyApp {
   private isInvisible = false
   private currentInputValue = ''
   private apiRequestController: AbortController | null = null
+  private t0: number;
 
   // --- Windows ---
   private mainWindow!: BrowserWindow
@@ -49,8 +50,8 @@ export class ClonelyApp {
   /**
    * Initializes the application by creating services and attaching app events.
    */
-  constructor() {
-
+  constructor(t0: number) {
+    this.t0 = t0;
     this.liveAudioService = new LiveAudioService()
     this.geminiHelper = new GeminiHelper()
     this.groqHelper = new GroqHelper()
@@ -70,7 +71,7 @@ export class ClonelyApp {
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
-        createAppWindow(this.isInvisible)
+        createAppWindow(this.isInvisible, this.t0)
       }
     })
   }
@@ -84,7 +85,7 @@ export class ClonelyApp {
     registerResourcesProtocol()
 
     // Create window and helper now that app is ready
-    this.mainWindow = createAppWindow(this.isInvisible)
+    this.mainWindow = createAppWindow(this.isInvisible, this.t0)
 
 
     this.shortcutsHelper = new ShortcutsHelper(this.mainWindow)
@@ -117,7 +118,7 @@ export class ClonelyApp {
     registerIpcHandlers({
       liveAudioService: this.liveAudioService,
       shortcutsHelper: this.shortcutsHelper,
-      createAppWindow,
+      createAppWindow: (isInvisible: boolean) => createAppWindow(isInvisible, this.t0),
       getMainWindow: () => this.mainWindow,
       setMainWindow: (win: BrowserWindow) => {
         this.mainWindow = win

@@ -101,7 +101,10 @@ export const Mainbar = () => {
       // Tell state machine to stop
       send({ type: 'MIC_STOP' });
     } else {
-      try {
+        // Optimistic UI: transition to live mode immediately
+        send({ type: 'MIC_START' });
+
+        try {
         // ======== Start Recording (optimised) ========
         const { handle: audioHandle, streams } = await startAudioStreaming((chunk) => {
           if (!uiActor.getSnapshot().matches({ live: 'streaming' })) return;
@@ -125,6 +128,8 @@ export const Mainbar = () => {
 
       } catch (_error) {
         console.error('[live] failed to start streaming', _error);
+        // Revert optimistic UI if startup failed
+        send({ type: 'MIC_STOP' });
       }
     }
   };

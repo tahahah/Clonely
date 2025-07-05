@@ -1,5 +1,6 @@
 import { GeminiLiveHelper } from '@/lib/llm/GeminiLiveHelper'
 import { TranscribeHelper } from '@/lib/llm/TranscribeHelper'
+import { performance } from 'node:perf_hooks';
 
 export interface LiveAudioCallbacks {
   onGeminiChunk?: (chunk: { text?: string; reset?: boolean }) => void
@@ -25,6 +26,7 @@ export class LiveAudioService {
    * Connect to both Gemini and Deepgram. Resolves once BOTH are ready to receive data.
    */
   async start(callbacks: LiveAudioCallbacks): Promise<void> {
+    const tStart = performance.now();
     // Prevent duplicate or concurrent start attempts
     if (this.active) {
       console.warn('LiveAudioService already active, ignoring start()');
@@ -46,6 +48,7 @@ export class LiveAudioService {
           onTranscript?.(text);
         }),
       ]);
+      console.log('[perf] live-audio-ready', (performance.now() - tStart).toFixed(1), 'ms');
     } catch (err) {
       // Roll back active flag if we fail to connect
       this.active = false;

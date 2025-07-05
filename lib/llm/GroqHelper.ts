@@ -69,7 +69,7 @@ export class GroqHelper {
     currentTranscript: string,
     onChunk: (chunk: string) => void
   ): Promise<z.infer<typeof ActionSchema>> {
-    console.warn('GroqHelper: streamQuestions called with:', { prevQuestions, currentTranscript });
+    // console.warn('GroqHelper: streamQuestions called with:', { prevQuestions, currentTranscript });
     const systemContent = JSON.stringify({
       role: "system",
       content: GROQ_SYSTEM_PROMPT,

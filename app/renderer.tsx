@@ -6,6 +6,8 @@ import App from './app'
 import { UIStateProvider } from './state/UIStateProvider'
 import './styles/app.css'
 
+console.timeEnd('renderer bootstrap');
+console.time('react mount');
 ReactDOM.createRoot(document.getElementById('app') as HTMLElement).render(
   <React.StrictMode>
     <UIStateProvider>
@@ -15,3 +17,4 @@ ReactDOM.createRoot(document.getElementById('app') as HTMLElement).render(
     </UIStateProvider>
   </React.StrictMode>
 )
+console.timeEnd('react mount');

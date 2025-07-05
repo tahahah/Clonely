@@ -29,8 +29,7 @@ export class GeminiHelper {
         functionCallingConfig: {
           mode: FunctionCallingMode.NONE
         }
-      },
-      systemInstruction: GEMINI_SYSTEM_PROMPT
+      }
     })
   }
 
