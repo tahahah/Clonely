@@ -59,7 +59,7 @@ export class TranscribeHelper {
         });
 
         this.connection.on(LiveTranscriptionEvents.Metadata, (data) => {
-          console.warn('Deepgram Metadata:', data);
+          // console.warn('Deepgram Metadata:', data);
         });
 
         this.connection.on(LiveTranscriptionEvents.Error, (err) => {
