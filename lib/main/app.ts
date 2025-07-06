@@ -19,7 +19,7 @@ export function createAppWindow(isInvisible = false, t0: number): BrowserWindow 
     },
     show: true,
     alwaysOnTop: true, // avoid hiding behind others in dev
-    frame: false,
+    frame: true,
     transparent: false,
     hasShadow: false,
     focusable: true,
