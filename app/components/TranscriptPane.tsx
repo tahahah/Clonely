@@ -63,7 +63,7 @@ const TranscriptPane: React.FC = () => {
             console.warn('TranscriptPane: Validated actions length', validatedActions.length);
             // Strip newlines from each action to ensure single-line display
             const cleanedActions = (validatedActions || []).map((action: string) => String(action).trim());
-            setActions(cleanedActions);
+            setActions([...cleanedActions.slice(0, 2), "✨ Suggestions for what to say next"]);
             actionsRef.current = cleanedActions;
           } catch (err) {
             console.error('GroqHelper error:', err);
@@ -101,8 +101,8 @@ const TranscriptPane: React.FC = () => {
     <div className="flex flex-col h-full glass rounded-lg shadow-inner">
       {/* Top Half - Transcript with auto-scroll */}
       <div className="flex-1 flex flex-col p-4 pb-2 min-h-0">
-        <h2 className="text-lg font-semibold mb-2 shrink-0">Live Transcription</h2>
-        <div className="flex-1 flex flex-col justify-end overflow-y-auto space-y-1 text-sm content-end">
+        <h2 className="text-xl font-semibold mb-2 shrink-0">Live Transcription</h2>
+        <div className="flex-1 flex flex-col justify-end overflow-y-auto space-y-1 text-md content-end">
           {transcriptLines.map((line, index) => (
             <p key={index} className="break-words">{line}</p>
           ))}
@@ -115,9 +115,9 @@ const TranscriptPane: React.FC = () => {
       
       {/* Bottom Half - Actions */}
       <div className="flex-1 flex flex-col p-4 pt-2 min-h-0">
-        <h2 className="text-lg font-semibold mb-2 shrink-0">Actions</h2>
+        <h2 className="text-xl font-semibold mb-2 shrink-0">Actions</h2>
         <div className="flex-1 overflow-y-auto">
-          <div className="text-sm">
+          <div className="text-md">
             {actions.map((action, index) => (
               <div
                 key={index}
