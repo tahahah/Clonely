@@ -32,10 +32,15 @@ export async function startAudioCapture(): Promise<AudioCaptureStreams> {
     // Keep video track for potential screen frames
     const systemSource = audioContext.createMediaStreamSource(systemStream);
 
-    // 4. Combine streams
+    // 4. Combine streams into **stereo** (L = mic, R = system)
+    const merger = audioContext.createChannelMerger(2);
+    // Connect mic to left (input 0)
+    micSource.connect(merger, 0, 0);
+    // Connect system audio to right (input 1)
+    systemSource.connect(merger, 0, 1);
+
     const destination = audioContext.createMediaStreamDestination();
-    micSource.connect(destination);
-    systemSource.connect(destination);
+    merger.connect(destination);
 
     const combinedStream = destination.stream;
 

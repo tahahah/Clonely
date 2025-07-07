@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol, ipcMain } from 'electron'
+import { app, BrowserWindow, protocol } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAppWindow } from './app'
 import { registerIpcHandlers } from './ipc/router'
@@ -118,6 +118,7 @@ export class ClonelyApp {
     registerIpcHandlers({
       liveAudioService: this.liveAudioService,
       shortcutsHelper: this.shortcutsHelper,
+      groqHelper: this.groqHelper, // Pass the singleton instance
       createAppWindow: (isInvisible: boolean) => createAppWindow(isInvisible, this.t0),
       getMainWindow: () => this.mainWindow,
       setMainWindow: (win: BrowserWindow) => {
@@ -132,11 +133,6 @@ export class ClonelyApp {
         this.currentInputValue = val
       }
     })
-
-    ipcMain.handle('streamGroqQuestions', async (_event, prevQuestions: string[], currentTranscript: string) => {
-      const result = await this.groqHelper.streamQuestions(prevQuestions, currentTranscript, () => {});
-      return result.actions;
-    });
   }
 
   /**

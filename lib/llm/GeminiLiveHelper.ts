@@ -79,7 +79,7 @@ export class GeminiLiveHelper {
         onmessage: (m) => {
           responseQueue.push(m);
           const tText = (m as any).text;
-          if (tText) {
+          if (tText && !tText.includes("NONE")) {
             if (this.turnJustCompleted) {
               // This is the first chunk of a new turn.
               // Send a reset signal along with the text from this first chunk.

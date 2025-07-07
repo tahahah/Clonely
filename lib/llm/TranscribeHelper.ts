@@ -18,7 +18,7 @@ export class TranscribeHelper {
     this.deepgram = createClient(this.apiKey);
   }
 
-  public async start(onTranscript: (transcript: string) => void, onUtteranceEnd?: () => void): Promise<void> {
+  public async start(onTranscript: (res: { transcript: string; channel: number; isFinal: boolean; words?: any[] }) => void, onUtteranceEnd?: () => void): Promise<void> {
     if (!this.apiKey) {
       console.error('Cannot start Deepgram transcription: API Key is missing.');
       return Promise.reject(new Error('Deepgram API Key is missing.'));
@@ -38,7 +38,8 @@ export class TranscribeHelper {
           smart_format: true,
           encoding: 'linear16',
           sample_rate: 16000,
-          diarize: true,
+          channels: 2,
+          multichannel: true,
         });
 
         this.connection.on(LiveTranscriptionEvents.Open, () => {
@@ -52,10 +53,20 @@ export class TranscribeHelper {
         });
 
         this.connection.on(LiveTranscriptionEvents.Transcript, (data) => {
-          const alternative = data.channel.alternatives[0];
-          if (alternative?.transcript) {
-            onTranscript(alternative);
-          }
+          const alt = data.channel.alternatives[0];
+          if (!alt?.transcript) return;
+          const channelIndex = data.channel_index[0];
+          const result = {
+            transcript: alt.transcript as string,
+            words: (alt.words || []).map((w: any) => ({
+              ...w,
+              speaker: channelIndex,
+            })),
+            channel: channelIndex,
+            isFinal: data.is_final as boolean,
+          };
+          console.log(`[Deepgram Transcript] Channel: ${result.channel}, IsFinal: ${result.isFinal}, Transcript: "${result.transcript}"`);
+          onTranscript(result as any);
         });
 
         this.connection.on(LiveTranscriptionEvents.UtteranceEnd, () => {
@@ -63,7 +74,7 @@ export class TranscribeHelper {
           onUtteranceEnd?.();
         });
 
-        this.connection.on(LiveTranscriptionEvents.Metadata, (data) => {
+        this.connection.on(LiveTranscriptionEvents.Metadata, (_meta) => {
           // console.warn('Deepgram Metadata:', data);
         });
 
