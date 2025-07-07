@@ -44,9 +44,15 @@ export class LiveAudioService {
           onGeminiChunk?.(chunk);
           console.warn('Gemini chunk:', chunk);
         }),
-        this.transcribe.start((text) => {
-          onTranscript?.(text);
-        }),
+        this.transcribe.start(
+          (text) => {
+            onTranscript?.(text);
+          },
+          () => {
+            console.warn('[LiveAudioService] Utterance end, calling gemini.finishTurn()');
+            this.gemini.finishTurn();
+          },
+        ),
       ]);
       console.log('[perf] live-audio-ready', (performance.now() - tStart).toFixed(1), 'ms');
     } catch (err) {

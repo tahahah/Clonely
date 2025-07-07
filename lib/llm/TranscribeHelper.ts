@@ -18,7 +18,7 @@ export class TranscribeHelper {
     this.deepgram = createClient(this.apiKey);
   }
 
-  public async start(onTranscript: (transcript: string) => void): Promise<void> {
+  public async start(onTranscript: (transcript: string) => void, onUtteranceEnd?: () => void): Promise<void> {
     if (!this.apiKey) {
       console.error('Cannot start Deepgram transcription: API Key is missing.');
       return Promise.reject(new Error('Deepgram API Key is missing.'));
@@ -56,6 +56,11 @@ export class TranscribeHelper {
           if (alternative?.transcript) {
             onTranscript(alternative);
           }
+        });
+
+        this.connection.on(LiveTranscriptionEvents.UtteranceEnd, () => {
+          console.warn('[TranscribeHelper] Utterance end');
+          onUtteranceEnd?.();
         });
 
         this.connection.on(LiveTranscriptionEvents.Metadata, (data) => {

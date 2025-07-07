@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality } from '@google/genai'
+import { EndSensitivity, GoogleGenAI, Modality, StartSensitivity } from '@google/genai'
 
 import { GEMINI_SYSTEM_PROMPT } from './systemPrompt'
 
@@ -105,8 +105,16 @@ export class GeminiLiveHelper {
         },
         onclose: (e) => console.warn('[GeminiLive] closed', e.reason),
       },
-      config: { responseModalities: [Modality.TEXT], systemInstruction: GEMINI_SYSTEM_PROMPT},
-    })) as unknown as LiveSession;
+      config: { responseModalities: [Modality.TEXT], systemInstruction: GEMINI_SYSTEM_PROMPT, realtimeInputConfig: {
+        automaticActivityDetection: {
+          disabled: false, // default
+          startOfSpeechSensitivity: StartSensitivity.START_SENSITIVITY_HIGH,
+          endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_HIGH,
+          prefixPaddingMs: 10,
+          silenceDurationMs: 5,
+        }
+      }
+    }})) as unknown as LiveSession;
 
     // detach async listener to forward text
     (async () => {
