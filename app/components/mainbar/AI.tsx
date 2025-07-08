@@ -28,17 +28,23 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible, onContentChange }) =>
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
+  // --- Streaming control refs ---
+  const resetIsPending = useRef(false);      // True immediately after a `reset` signal until we determine what to do
+  const firstChunkBuffer = useRef('');       // Accumulates the first chunk(s) to detect <NONE/> or <APPEND/>
+  const skipResponse = useRef(false);        // If current turn should be ignored (<NONE/>)
+  const appendMode = useRef(false);          // If we should just append (<APPEND/>) instead of replacing
+
 
   // Streamed chunk listener (legacy)
-  useEffect(() => {
-    const handleChunk = (chunk: string) => {
-      setAnswer((prev) => (prev || '') + chunk);
-    };
-    window.api.receive('chat:chunk', handleChunk);
-    return () => {
-      window.api.removeAllListeners('chat:chunk');
-    };
-  }, []);
+  // useEffect(() => {
+  //   const handleChunk = (chunk: string) => {
+  //     setAnswer((prev) => (prev || '') + chunk);
+  //   };
+  //   window.api.receive('chat:chunk', handleChunk);
+  //   return () => {
+  //     window.api.removeAllListeners('chat:chunk');
+  //   };
+  // }, []);
 
   useEffect(() => {
     if (state.matches('activeIdle')) {
@@ -53,19 +59,77 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible, onContentChange }) =>
 
   useEffect(() => {
     const handleStreamChunk = (chunk: { text?: string; reset?: boolean }) => {
+      // 1. Handle the reset flag (start of a new turn)
       if (chunk.reset) {
-        setAnswer('')
+        resetIsPending.current = true;
+        firstChunkBuffer.current = '';
+        skipResponse.current = false;
+        appendMode.current = false;
+        // return; // Wait for first text chunk to decide behaviour
+
       }
-      if (chunk.text) {
-        setAnswer((prev) => {
-          const newAnswer = (prev || '') + chunk.text;
+
+      if (!chunk.text) return;
+
+
+      // Helper to append text and update width heuristics
+      const addContent = (text: string) => {
+        if (!text) return;
+        setAnswer(prev => {
+          const base = prev || '';
+          const newAnswer = base + text;
           const containsCode = /```/.test(newAnswer);
           const wordCount = newAnswer.split(/\s+/).filter(Boolean).length;
           const shouldBeWide = containsCode || wordCount > 100;
           onContentChange?.(shouldBeWide);
           return newAnswer;
         });
+      };
+
+      // 2. We're still awaiting the first meaningful chunk after reset
+      if (resetIsPending.current) {
+
+        firstChunkBuffer.current += chunk.text;
+
+        // If we haven't received the end of the tag yet, keep buffering
+        if (firstChunkBuffer.current.startsWith('<') && !firstChunkBuffer.current.includes('>')) {
+
+          return;
+        }
+
+        const buf = firstChunkBuffer.current;
+
+        if (buf.startsWith('<NONE/>')) {
+          // Completely ignore this response
+          skipResponse.current = true;
+          resetIsPending.current = false;
+          return;
+        }
+
+        if (buf.startsWith('<APPEND/>')) {
+
+          appendMode.current = true;
+          resetIsPending.current = false;
+          const contentAfterTag = buf.replace('<APPEND/>', '');
+          if (contentAfterTag) addContent(contentAfterTag);
+          return;
+        }
+
+        // Any other content means a brand-new answer.
+
+        appendMode.current = false;
+        skipResponse.current = false;
+        resetIsPending.current = false;
+        setAnswer(''); // Clear previous answer
+        addContent(buf);
+        return;
       }
+
+      // 3. Subsequent chunks within the same turn
+      if (skipResponse.current) return; // Ignoring this turn
+
+
+      addContent(chunk.text);
     };
 
     const handleApiError = (error: string) => setErrorMessage(error);
@@ -97,7 +161,7 @@ export const AI: React.FC<AIProps> = ({ isChatPaneVisible, onContentChange }) =>
       window.api.removeAllListeners('api-error');
       window.api.removeAllListeners('set-initial-input');
     };
-  }, [send, isChatLoading, onContentChange]);
+  }, [send, isChatLoading, onContentChange, answer]);
 
   useEffect(() => {
     if (isChatPaneVisible && (isChatIdle || isChatError)) {

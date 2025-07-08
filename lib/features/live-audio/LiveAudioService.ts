@@ -171,8 +171,8 @@ export class LiveAudioService {
 
     // If this is from device channel (1), feed to Gemini as text.
     if (res.channel === 1 && this.gemini.canAcceptTextInput()) {
-        console.log(`[LiveAudioService] Sending text to Gemini (Device Channel): "Device: ${res.transcript}"`);
-        this.gemini.sendTextInput(`Device: ${res.transcript}`);
+        console.log(`[LiveAudioService] Sending text to Gemini (Device Channel): "Device Audio Transcript: ${res.transcript}"`);
+        this.gemini.sendTextInput(`Device Audio Transcript: ${res.transcript}`);
     }
   }
 }

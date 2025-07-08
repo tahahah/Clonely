@@ -27,7 +27,11 @@ export class GeminiLiveHelper {
   private turnJustCompleted = false
 
   // Start a new live session. If an old one is still open, close it first so we start fresh.
+  // Ensure `turnJustCompleted` is true so that the very first chunk we receive in a fresh session
+  // is treated as the start of a new turn (UI reset).
   async startSession(onMessage: (chunk: ChatChunk) => void): Promise<void> {
+    // Treat the upcoming first chunk as a new turn so downstream consumers get a reset flag.
+    this.turnJustCompleted = true;
     if (this.session) {
       try {
         this.session.close();
