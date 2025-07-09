@@ -64,6 +64,8 @@ export class TranscribeHelper {
             })),
             channel: channelIndex,
             isFinal: data.is_final as boolean,
+            start: data.start,
+            end: data.start+data.duration,
           };
           console.log(`[Deepgram Transcript] Channel: ${result.channel}, IsFinal: ${result.isFinal}, Transcript: "${result.transcript}"`);
           onTranscript(result as any);

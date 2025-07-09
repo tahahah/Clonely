@@ -77,7 +77,6 @@ export class GeminiLiveHelper {
       model: this.modelName,
       callbacks: {
         onopen: () => {
-          console.warn('[GeminiLive] opened');
           resolveConnection(); // Resolve the promise when connection opens
         },
         onmessage: (m) => {
@@ -85,17 +84,16 @@ export class GeminiLiveHelper {
           const tText = (m as any).text;
           if (tText) {
             if (this.turnJustCompleted) {
-              // This is the first chunk of a new turn.
-              // Send a reset signal along with the text from this first chunk.
               onMessage({ reset: true, text: tText });
               this.turnJustCompleted = false;
             } else {
-              // This is a subsequent chunk in the same turn.
               onMessage({ text: tText });
             }
           }
           if (m?.serverContent?.turnComplete) {
             this.turnJustCompleted = true;
+            // Clear the response queue to prevent reprocessing old messages if the session somehow re-emits them
+            while(responseQueue.length > 0) responseQueue.pop();
           }
           if (m?.serverContent?.turnComplete && this.closePending && this.session) {
             this.session.close();
