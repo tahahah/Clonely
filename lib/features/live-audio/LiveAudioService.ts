@@ -4,7 +4,14 @@ import { performance } from 'node:perf_hooks';
 
 export interface LiveAudioCallbacks {
   onGeminiChunk?: (chunk: { text?: string; reset?: boolean }) => void
-  onTranscript?: (alternative: { transcript: string; words?: any[] }) => void
+  onTranscript?: (res: {
+    transcript: string;
+    channel: number;
+    isFinal: boolean;
+    words?: any[];
+    start?: number;
+    end?: number;
+  }) => void
 }
 
 /**
@@ -18,7 +25,14 @@ export class LiveAudioService {
   private active = false;
   private geminiAudioMuted = false; // New flag to control Gemini audio
   private transcriptDebounceTimer: NodeJS.Timeout | null = null;
-  private bufferedTranscript: any = null;
+  private bufferedTranscript: {
+    transcript: string;
+    channel: number;
+    isFinal: boolean;
+    words?: any[];
+    start?: number;
+    end?: number;
+} | null = null;
 
   isActive(): boolean {
     return this.active
@@ -47,7 +61,14 @@ export class LiveAudioService {
           console.warn('Gemini chunk:', chunk);
         }),
         this.transcribe.start(
-          (res) => {
+          (res: {
+            transcript: string;
+            channel: number;
+            isFinal: boolean;
+            words?: any[];
+            start?: number;
+            end?: number;
+          }) => {
             if (!res.isFinal) {
               return;
             }
@@ -65,7 +86,7 @@ export class LiveAudioService {
               }
 
               console.log(`[LiveAudioService] Debounced pair. Chose Ch${winner.channel} from Buffered(Ch${buffered.channel}) & Current(Ch${res.channel}).`);
-              this.processFinalTranscript(winner, onTranscript);
+              this.processFinalTranscript(winner, onTranscript || (() => {}));
 
             } else {
               // This is the first transcript of a potential pair. Buffer it and set a timer.
@@ -73,7 +94,7 @@ export class LiveAudioService {
               this.transcriptDebounceTimer = setTimeout(() => {
                 if (this.bufferedTranscript) {
                   console.log(`[LiveAudioService] Processing single transcript after timeout.`);
-                  this.processFinalTranscript(this.bufferedTranscript, onTranscript);
+                  this.processFinalTranscript(this.bufferedTranscript, onTranscript || (() => {}));
                   this.bufferedTranscript = null;
                 }
               }, 200); // Wait 200ms for a potential duplicate
@@ -165,14 +186,22 @@ export class LiveAudioService {
     return left;
   }
 
-  private processFinalTranscript(res: any, onTranscript: (res: any) => void): void {
-    console.log(`[LiveAudioService] Sending to UI (isFinal): Channel: ${res.channel}, Transcript: "${res.transcript}"`);
+  private processFinalTranscript(res: any, onTranscript: (res: {
+    transcript: string;
+    channel: number;
+    isFinal: boolean;
+    words?: any[];
+    start?: number;
+    end?: number;
+  }) => void): void {
     onTranscript?.(res);
 
     // If this is from device channel (1), feed to Gemini as text.
     if (res.channel === 1 && this.gemini.canAcceptTextInput()) {
-        console.log(`[LiveAudioService] Sending text to Gemini (Device Channel): "Device Audio Transcript: ${res.transcript}"`);
-        this.gemini.sendTextInput(`Device Audio Transcript: ${res.transcript}`);
+        const start = res.start?.toFixed(2) || 'undefined';
+        const end = res.end?.toFixed(2) || 'undefined';
+        console.warn(`[LiveAudioService] Sending text to Gemini (Device Channel): "Device Audio Transcript [${start}-${end}]: ${res.transcript}"`);
+        this.gemini.sendTextInput(`Device Audio Transcript [${start}-${end}]: ${res.transcript}`);
     }
   }
 }

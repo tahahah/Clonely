@@ -63,7 +63,7 @@ const TranscriptPane: React.FC = () => {
             console.warn('TranscriptPane: Validated actions length', validatedActions.length);
             // Strip newlines from each action to ensure single-line display
             const cleanedActions = (validatedActions || []).map((action: string) => String(action).trim());
-            setActions([...cleanedActions.slice(0, 2), "✨ Suggestions for what to say next"]);
+            setActions([...cleanedActions.slice(0, 2), "✨ Please suggest what to say next"]);
             actionsRef.current = cleanedActions;
           } catch (err) {
             console.error('GroqHelper error:', err);
@@ -116,7 +116,7 @@ const TranscriptPane: React.FC = () => {
       {/* Bottom Half - Actions */}
       <div className="flex-1 flex flex-col p-4 pt-2 min-h-0">
         <h2 className="text-xl font-semibold mb-2 shrink-0">Actions</h2>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-hidden">
           <div className="text-md">
             {actions.map((action, index) => (
               <div
@@ -125,7 +125,7 @@ const TranscriptPane: React.FC = () => {
                 onClick={() => window.api?.send('live-audio-send-text-input', action)}
               >
                 <span className="mr-2">•</span>
-                <div className="flex-1">
+                <div className="flex-1 h-12 overflow-hidden text-ellipsis">
                   <MarkdownRenderer content={action} />
                 </div>
               </div>
