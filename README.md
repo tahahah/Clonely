@@ -29,6 +29,7 @@ A clone of Cluely, because it didn't work on Windows when I tried it. <br/> So I
 - 👀 Can see your screen
 - 🎤 Can hear you alongside your device, including others in meetings (this is a good thing)
 - 🔄 Two modes: chat, voice. Both have access to your screen
+- Almost instantaneous response in voice mode
 - ⌨️ Shortcut enabled: quickly hide with <kbd>Ctrl</kbd>+<kbd>Space</kbd>, Send messages with <kbd>Ctrl</kbd>+<kbd>Enter</kbd>
 
 <br />
